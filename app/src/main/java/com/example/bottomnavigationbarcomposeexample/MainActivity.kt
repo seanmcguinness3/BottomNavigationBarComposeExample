@@ -1,10 +1,18 @@
 package com.example.bottomnavigationbarcomposeexample
 
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothManager
+import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -15,12 +23,17 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,13 +42,52 @@ class MainActivity : ComponentActivity() {
             MainScreen()
         }
     }
+
+    @Composable
+    fun DevicesScreen() {
+        var text by remember { mutableStateOf("Start Scan") }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colorResource(id = R.color.colorPrimaryDark))
+                .wrapContentSize(Alignment.Center)
+        ) {
+            Text(
+                text = "Devices View",
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+                textAlign = TextAlign.Center,
+                fontSize = 25.sp
+            )
+            Button(onClick = {
+                text = "Scanning..."
+                Log.d("DD", "WORKING")
+                StartScan()
+            }) {
+                Text(text)
+            }
+        }
+    }
+
+    val bluetoothAdapter: BluetoothAdapter by lazy {
+        val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        bluetoothManager.adapter
+    }
+
+    private val bleScanner by lazy {
+        bluetoothAdapter.bluetoothLeScanner
+    }
+    fun StartScan(){
+        Log.d("DD","Scanning from main")
+    }
+
 }
 
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
     Scaffold(
-        topBar = { TopBar() },
         bottomBar = { BottomNavigationBar(navController) },
         content = { padding ->
             Box(modifier = Modifier.padding(padding)) {
@@ -58,44 +110,18 @@ fun Navigation(navController: NavHostController) {
         composable(NavigationItem.Home.route) {
             HomeScreen()
         }
-        composable(NavigationItem.Music.route) {
-            MusicScreen()
-        }
-        composable(NavigationItem.Movies.route) {
-            MoviesScreen()
-        }
-        composable(NavigationItem.Books.route) {
-            BooksScreen()
-        }
-        composable(NavigationItem.Profile.route) {
-            ProfileScreen()
+        composable(NavigationItem.Devices.route) {
+            DevicesScreen()
         }
     }
 }
 
-@Composable
-fun TopBar() {
-    TopAppBar(
-        title = { Text(text = stringResource(R.string.app_name), fontSize = 18.sp) },
-        backgroundColor = colorResource(id = R.color.colorPrimary),
-        contentColor = Color.White
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun TopBarPreview() {
-    TopBar()
-}
 
 @Composable
 fun BottomNavigationBar(navController: NavController) {
     val items = listOf(
         NavigationItem.Home,
-        NavigationItem.Music,
-        NavigationItem.Movies,
-        NavigationItem.Books,
-        NavigationItem.Profile
+        NavigationItem.Devices,
     )
     BottomNavigation(
         backgroundColor = colorResource(id = R.color.colorPrimary),
