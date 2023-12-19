@@ -35,12 +35,22 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 var deviceList = arrayListOf<String>("No Devices")
 var deviceIterator = 0
 
+class MainViewModel : ViewModel(){
+    var deviceList2 = arrayListOf<String>("No Devices")
+
+    fun updateDeviceList(){
+        deviceList2 = deviceList
+    }
+}
+
 @Composable
-fun HomeScreen() {
+fun HomeScreen(mainViewModel: MainViewModel = viewModel()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -67,7 +77,7 @@ fun HomeScreenPreview() {
 
 
 @Composable
-fun DevicesScreen() {
+fun DevicesScreen(mainViewModel: MainViewModel = viewModel()) {
     var text by remember { mutableStateOf("Start Scan") }
     var scanBLE by remember { mutableStateOf(false) }
     var derivedList by remember { mutableStateOf(deviceList) }
@@ -96,7 +106,7 @@ fun DevicesScreen() {
         }
         LazyColumn(modifier = Modifier.padding(vertical = 4.dp))
         {
-            items(items = derivedList){name ->
+            items(items = mainViewModel.deviceList2){name ->
                 ListItem(name = name)
             }
         }
@@ -140,7 +150,7 @@ fun ListItem(name : String){
 
 @Composable
 @SuppressLint("MissingPermission")
-fun StartScan(startTime: Long){
+fun StartScan(startTime: Long, mainViewModel: MainViewModel = viewModel()){
     Log.d("DD","Now scanning")
     val context = LocalContext.current
 
@@ -157,6 +167,7 @@ fun StartScan(startTime: Long){
             super.onScanResult(callbackType, result)
             if(result.device.name != null) {
                 deviceList.add(result.device.name)
+                mainViewModel.updateDeviceList()
                 Log.d("DD", "Device Found: ${result.device.name}")
             }
             val elapsedTime = System.currentTimeMillis() - startTime
