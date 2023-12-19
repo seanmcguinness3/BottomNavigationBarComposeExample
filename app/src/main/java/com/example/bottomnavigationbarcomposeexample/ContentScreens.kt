@@ -70,7 +70,8 @@ fun HomeScreenPreview() {
 fun DevicesScreen() {
     var text by remember { mutableStateOf("Start Scan") }
     var scanBLE by remember { mutableStateOf(false) }
-    val derivedList 
+    var derivedList by remember { mutableStateOf(deviceList) }
+    //val derivedList by lazy(LazyThreadSafetyMode.PUBLICATION) { deviceList }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -95,8 +96,7 @@ fun DevicesScreen() {
         }
         LazyColumn(modifier = Modifier.padding(vertical = 4.dp))
         {
-            val names : List<String> = List(20){"$it"}
-            items(items = deviceList){name ->
+            items(items = derivedList){name ->
                 ListItem(name = name)
             }
         }
@@ -155,11 +155,13 @@ fun StartScan(startTime: Long){
     val listScanCallback = object : ScanCallback(){
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             super.onScanResult(callbackType, result)
-            Log.d("DD", "Device Found: ${result.device.name}")
-            deviceList.add(result.device.name)
+            if(result.device.name != null) {
+                deviceList.add(result.device.name)
+                Log.d("DD", "Device Found: ${result.device.name}")
+            }
             val elapsedTime = System.currentTimeMillis() - startTime
-            if ((elapsedTime) > 1000){
 
+            if ((elapsedTime) > 1000){
                 bleScanner.stopScan(this)
             }
         }
