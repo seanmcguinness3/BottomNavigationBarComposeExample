@@ -42,10 +42,11 @@ var deviceList = arrayListOf<String>("No Devices")
 var deviceIterator = 0
 
 class MainViewModel : ViewModel(){
-    var deviceList2 = arrayListOf<String>("No Devices")
+    var deviceList2 = mutableStateListOf<String>("No Devices")
 
     fun updateDeviceList(){
-        deviceList2 = deviceList
+        //deviceList2 = deviceList
+        Log.d("DD","$deviceList2") //this is getting called
     }
 }
 
@@ -167,6 +168,7 @@ fun StartScan(startTime: Long, mainViewModel: MainViewModel = viewModel()){
             super.onScanResult(callbackType, result)
             if(result.device.name != null) {
                 deviceList.add(result.device.name)
+                mainViewModel.deviceList2.add(result.device.name) //if this works we can get rid of deviceList and updateDeviceList
                 mainViewModel.updateDeviceList()
                 Log.d("DD", "Device Found: ${result.device.name}")
             }
