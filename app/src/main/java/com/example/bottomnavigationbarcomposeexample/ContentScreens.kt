@@ -81,7 +81,8 @@ fun DevicesScreen() {
         }
     }
     if(scanBLE){
-        StartScan()
+        StartScan(System.currentTimeMillis())
+        scanBLE = false
     }
 }
 
@@ -89,7 +90,7 @@ fun DevicesScreen() {
 
 @Composable
 @SuppressLint("MissingPermission")
-fun StartScan(){
+fun StartScan(startTime: Long){
     Log.d("DD","Now scanning")
     val context = LocalContext.current
 
@@ -100,12 +101,19 @@ fun StartScan(){
     val bleScanner by lazy {
         bluetoothAdapter.bluetoothLeScanner
     }
+
     val listScanCallback = object : ScanCallback(){
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             super.onScanResult(callbackType, result)
             Log.d("DD", "Device Found: ${result.device.name}")
+            val elapsedTime = System.currentTimeMillis() - startTime
+            Log.d("DD", "Elapsed time: $elapsedTime")
+            if ((elapsedTime) > 1000){
+                bleScanner.stopScan(this)
+            }
         }
     }
+
     bleScanner.startScan(listScanCallback)
 }
 

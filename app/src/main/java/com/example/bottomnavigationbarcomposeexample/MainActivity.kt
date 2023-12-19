@@ -34,54 +34,29 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.core.app.ActivityCompat.requestPermissions
+import android.Manifest
+import android.os.Build
+import androidx.annotation.RequiresApi
+import androidx.core.app.ActivityCompat
 
 class MainActivity : ComponentActivity() {
+    companion object{
+        private const val PERMISSION_REQUEST_CODE = 1
+    }
+    @RequiresApi(Build.VERSION_CODES.M)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MainScreen()
         }
+        checkBT()
     }
 
-    @Composable
-    fun DevicesScreen() {
-        var text by remember { mutableStateOf("Start Scan") }
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(colorResource(id = R.color.colorPrimaryDark))
-                .wrapContentSize(Alignment.Center)
-        ) {
-            Text(
-                text = "Devices View",
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-                textAlign = TextAlign.Center,
-                fontSize = 25.sp
-            )
-            Button(onClick = {
-                text = "Scanning..."
-                Log.d("DD", "WORKING")
-                StartScan()
-            }) {
-                Text(text)
-            }
-        }
+    @RequiresApi(Build.VERSION_CODES.M)
+    fun checkBT(){
+        requestPermissions(arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.ACCESS_FINE_LOCATION), PERMISSION_REQUEST_CODE)
     }
-
-    val bluetoothAdapter: BluetoothAdapter by lazy {
-        val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        bluetoothManager.adapter
-    }
-
-    private val bleScanner by lazy {
-        bluetoothAdapter.bluetoothLeScanner
-    }
-    fun StartScan(){
-        Log.d("DD","Scanning from main")
-    }
-
 }
 
 @Composable
