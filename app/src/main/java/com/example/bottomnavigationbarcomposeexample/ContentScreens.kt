@@ -9,6 +9,7 @@ import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.BoxScopeInstance.align
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.Button
@@ -70,7 +71,7 @@ fun DevicesScreen() {
         modifier = Modifier
             .fillMaxSize()
             .background(colorResource(id = R.color.colorPrimaryDark))
-            .wrapContentSize(Alignment.Center)
+            .wrapContentSize(Alignment.TopCenter)
     ) {
         Text(
             text = "Devices View",
@@ -86,6 +87,15 @@ fun DevicesScreen() {
             scanBLE = true
         }) {
             Text(text)
+        }
+    }
+    LazyColumn(modifier = Modifier.padding(vertical = 4.dp)
+        .height(200.dp)
+        .align(to)
+    ){
+        val names : List<String> = List(20){"$it"}
+        items(items = names){name ->
+            ListItem(name = name)
         }
     }
     if(scanBLE){
@@ -135,8 +145,6 @@ fun RecyclerView(names : List<String> = List(1000){"$it"}){
 
 }
 
-
-
 @Composable
 @SuppressLint("MissingPermission")
 fun StartScan(startTime: Long){
@@ -169,6 +177,6 @@ fun StartScan(startTime: Long){
 @Preview(showBackground = true)
 @Composable
 fun DevicesScreenPreview() {
-    RecyclerView()
+    DevicesScreen()
 }
 
