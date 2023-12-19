@@ -9,7 +9,6 @@ import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.BoxScopeInstance.align
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.Button
@@ -28,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.VerticalAlignmentLine
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
@@ -35,6 +35,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
+lateinit var deviceList: ArrayList<String>
+var deviceIterator = 0
 
 @Composable
 fun HomeScreen() {
@@ -81,23 +84,23 @@ fun DevicesScreen() {
             textAlign = TextAlign.Center,
             fontSize = 25.sp
         )
-        Button(onClick = {
+        Button(modifier = Modifier.padding(horizontal = 80.dp),
+            onClick = {
             text = "Scanning..."
             Log.d("DD", "WORKING")
             scanBLE = true
         }) {
             Text(text)
         }
-    }
-    LazyColumn(modifier = Modifier.padding(vertical = 4.dp)
-        .height(200.dp)
-        .align(to)
-    ){
-        val names : List<String> = List(20){"$it"}
-        items(items = names){name ->
-            ListItem(name = name)
+        LazyColumn(modifier = Modifier.padding(vertical = 4.dp))
+        {
+            val names : List<String> = List(20){"$it"}
+            items(items = deviceList){name ->
+                ListItem(name = name)
+            }
         }
     }
+
     if(scanBLE){
         StartScan(System.currentTimeMillis())
         scanBLE = false
@@ -133,17 +136,6 @@ fun ListItem(name : String){
     }
 }
 
-@OptIn(ExperimentalMaterialApi::class)
-@Composable
-fun RecyclerView(names : List<String> = List(1000){"$it"}){
-
-    LazyColumn(modifier = Modifier.padding(vertical = 4.dp)){
-        items(items = names){name ->
-            ListItem(name = name)
-        }
-    }
-
-}
 
 @Composable
 @SuppressLint("MissingPermission")
@@ -163,8 +155,8 @@ fun StartScan(startTime: Long){
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             super.onScanResult(callbackType, result)
             Log.d("DD", "Device Found: ${result.device.name}")
+            deviceList.add(result.device.name)
             val elapsedTime = System.currentTimeMillis() - startTime
-            Log.d("DD", "Elapsed time: $elapsedTime")
             if ((elapsedTime) > 1000){
                 bleScanner.stopScan(this)
             }
