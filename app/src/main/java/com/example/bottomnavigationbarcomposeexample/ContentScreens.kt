@@ -1,7 +1,6 @@
 package com.example.bottomnavigationbarcomposeexample
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.bluetooth.*
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
@@ -12,8 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.Button
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.ListItem
+import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedButton
 import androidx.compose.material.Surface
@@ -27,7 +25,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.VerticalAlignmentLine
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
@@ -38,16 +35,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 
-var deviceList = arrayListOf<String>("No Devices")
-var deviceIterator = 0
+var firstDeviceFlag = true
+class MainViewModel : ViewModel() {
+    var deviceList = mutableStateListOf<String>("No Devices")
 
-class MainViewModel : ViewModel(){
-    var deviceList2 = mutableStateListOf<String>("No Devices")
-
-    fun updateDeviceList(){
-        //deviceList2 = deviceList
-        Log.d("DD","$deviceList2") //this is getting called
-    }
 }
 
 @Composable
@@ -76,71 +67,80 @@ fun HomeScreenPreview() {
 }
 
 
-
 @Composable
 fun DevicesScreen(mainViewModel: MainViewModel = viewModel()) {
     var text by remember { mutableStateOf("Start Scan") }
     var scanBLE by remember { mutableStateOf(false) }
-    var derivedList by remember { mutableStateOf(deviceList) }
-    //val derivedList by lazy(LazyThreadSafetyMode.PUBLICATION) { deviceList }
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(colorResource(id = R.color.colorPrimaryDark))
             .wrapContentSize(Alignment.TopCenter)
     ) {
-        Text(
-            text = "Devices View",
-            fontWeight = FontWeight.Bold,
-            color = Color.White,
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-            textAlign = TextAlign.Center,
-            fontSize = 25.sp
-        )
-        Button(modifier = Modifier.padding(horizontal = 80.dp),
+        Button(modifier = Modifier
+            .padding(horizontal = 80.dp, vertical = 20.dp)
+            .fillMaxWidth(1.0f),
+            colors = ButtonDefaults.buttonColors(
+                backgroundColor = colorResource(id = R.color.colorText),
+                contentColor = colorResource(id = R.color.colorPrimaryDark)
+            ),
             onClick = {
-            text = "Scanning..."
-            Log.d("DD", "WORKING")
-            scanBLE = true
-        }) {
+                text = "Scanning..."
+                Log.d("DD", "WORKING")
+                scanBLE = true
+            }) {
             Text(text)
         }
         LazyColumn(modifier = Modifier.padding(vertical = 4.dp))
         {
-            items(items = mainViewModel.deviceList2){name ->
+            items(items = mainViewModel.deviceList) { name ->
                 ListItem(name = name)
             }
         }
     }
 
-    if(scanBLE){
+    if (scanBLE) {
         StartScan(System.currentTimeMillis())
         scanBLE = false
     }
 }
 
 @Composable
-fun ListItem(name : String){
-    Surface(color = MaterialTheme.colors.primary,
-        modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)){
+fun ListItem(name: String) {
+    Surface(
+        color = colorResource(id = R.color.colorPrimary),
+        modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)
+    ) {
 
-        Column(modifier = Modifier
-            .padding(24.dp)
-            .fillMaxWidth()){
+        Column(
+            modifier = Modifier
+                .padding(10.dp)
+                .fillMaxWidth()
+        ) {
 
             Row {
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                ){
-                    Text(text = "Course")
-                    Text(text = name, style = MaterialTheme.typography.h4.copy(
-                        fontWeight = FontWeight.ExtraBold
-                    ))
+                ) {
+                    Text(text = "Device", color = colorResource(id = R.color.colorText))
+                    Text(
+                        text = name, style = MaterialTheme.typography.h6.copy(
+                            fontWeight = FontWeight.ExtraBold
+                        ), color = colorResource(id = R.color.colorText)
+                    )
                 }
 
-                OutlinedButton(onClick = { /*TODO*/ }) {
-                    Text(text = "Show More")
+                OutlinedButton(modifier = Modifier
+                    .padding(horizontal = 20.dp),
+                    colors = ButtonDefaults.buttonColors(
+                    backgroundColor = colorResource(R.color.colorText),
+                    contentColor = colorResource(
+                        id = R.color.colorPrimaryDark
+                    )
+                ),
+                    onClick = { /*TODO*/ }) {
+                    Text(text = "Connect")
                 }
             }
         }
@@ -151,30 +151,34 @@ fun ListItem(name : String){
 
 @Composable
 @SuppressLint("MissingPermission")
-fun StartScan(startTime: Long, mainViewModel: MainViewModel = viewModel()){
-    Log.d("DD","Now scanning")
+fun StartScan(startTime: Long, mainViewModel: MainViewModel = viewModel()) {
+    Log.d("DD", "Now scanning")
     val context = LocalContext.current
 
     val bluetoothAdapter: BluetoothAdapter by lazy {
-        val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        val bluetoothManager =
+            context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         bluetoothManager.adapter
     }
     val bleScanner by lazy {
         bluetoothAdapter.bluetoothLeScanner
     }
 
-    val listScanCallback = object : ScanCallback(){
+    val listScanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             super.onScanResult(callbackType, result)
-            if(result.device.name != null) {
-                deviceList.add(result.device.name)
-                mainViewModel.deviceList2.add(result.device.name) //if this works we can get rid of deviceList and updateDeviceList
-                mainViewModel.updateDeviceList()
+            if (result.device.name != null) {
+                if (firstDeviceFlag){
+                    mainViewModel.deviceList[0] = result.device.name
+                    firstDeviceFlag = false 
+                }else {
+                    mainViewModel.deviceList.add(result.device.name)
+                }
                 Log.d("DD", "Device Found: ${result.device.name}")
             }
             val elapsedTime = System.currentTimeMillis() - startTime
 
-            if ((elapsedTime) > 1000){
+            if ((elapsedTime) > 1000) {
                 bleScanner.stopScan(this)
             }
         }
