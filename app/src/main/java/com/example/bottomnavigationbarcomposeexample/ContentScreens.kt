@@ -38,7 +38,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 var firstDeviceFlag = true
 class MainViewModel : ViewModel() {
     var deviceList = mutableStateListOf<String>("No Devices")
-
+    var scanButtonText = mutableStateOf("Start Scan")
+    var connectButtonText = mutableStateListOf<String>("Connect")
 }
 
 @Composable
@@ -69,7 +70,6 @@ fun HomeScreenPreview() {
 
 @Composable
 fun DevicesScreen(mainViewModel: MainViewModel = viewModel()) {
-    var text by remember { mutableStateOf("Start Scan") }
     var scanBLE by remember { mutableStateOf(false) }
     Column(
         modifier = Modifier
@@ -85,11 +85,11 @@ fun DevicesScreen(mainViewModel: MainViewModel = viewModel()) {
                 contentColor = colorResource(id = R.color.colorPrimaryDark)
             ),
             onClick = {
-                text = "Scanning..."
+                mainViewModel.scanButtonText = mutableStateOf("Scanning...")
                 Log.d("DD", "WORKING")
                 scanBLE = true
             }) {
-            Text(text)
+            Text(text = mainViewModel.scanButtonText.value)
         }
         LazyColumn(modifier = Modifier.padding(vertical = 4.dp))
         {
@@ -107,6 +107,8 @@ fun DevicesScreen(mainViewModel: MainViewModel = viewModel()) {
 
 @Composable
 fun ListItem(name: String) {
+    var connectToDeviceBool by remember { mutableStateOf(false)}
+    var connectToDeviceName by remember { mutableStateOf("none")}
     Surface(
         color = colorResource(id = R.color.colorPrimary),
         modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)
@@ -139,13 +141,26 @@ fun ListItem(name: String) {
                         id = R.color.colorPrimaryDark
                     )
                 ),
-                    onClick = { /*TODO*/ }) {
+                    onClick = {
+                        Log.d("DD", "Tapped on $name")
+                        connectToDeviceName = name
+                        connectToDeviceBool = true
+                    }) {
                     Text(text = "Connect")
                 }
             }
         }
 
     }
+    if(connectToDeviceBool){
+        ConnectToPolar(name = name)
+        connectToDeviceBool = false
+    }
+}
+
+@Composable
+fun ConnectToPolar(name: String) {
+    Log.d("DD", "Connecting to $name")
 }
 
 
@@ -179,6 +194,9 @@ fun StartScan(startTime: Long, mainViewModel: MainViewModel = viewModel()) {
             val elapsedTime = System.currentTimeMillis() - startTime
 
             if ((elapsedTime) > 1000) {
+                mainViewModel.scanButtonText = mutableStateOf("Restart Scan") //This should update the button text but it's not, don't know why
+                //keep an eye out for a solution but moivng on for now
+                Log.d("DD", "Current scan button text = ${mainViewModel.scanButtonText.value}")
                 bleScanner.stopScan(this)
             }
         }
