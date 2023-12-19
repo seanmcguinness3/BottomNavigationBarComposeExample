@@ -36,7 +36,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-lateinit var deviceList: ArrayList<String>
+var deviceList = arrayListOf<String>("No Devices")
 var deviceIterator = 0
 
 @Composable
@@ -70,6 +70,7 @@ fun HomeScreenPreview() {
 fun DevicesScreen() {
     var text by remember { mutableStateOf("Start Scan") }
     var scanBLE by remember { mutableStateOf(false) }
+    val derivedList 
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -158,6 +159,7 @@ fun StartScan(startTime: Long){
             deviceList.add(result.device.name)
             val elapsedTime = System.currentTimeMillis() - startTime
             if ((elapsedTime) > 1000){
+
                 bleScanner.stopScan(this)
             }
         }
