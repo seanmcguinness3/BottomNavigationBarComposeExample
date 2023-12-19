@@ -39,7 +39,7 @@ var firstDeviceFlag = true
 class MainViewModel : ViewModel() {
     var deviceList = mutableStateListOf<String>("No Devices")
     var scanButtonText = mutableStateOf("Start Scan")
-    var connectButtonText = mutableStateListOf<String>("Connect")
+    var connectedDeviceList = mutableStateListOf<String>("No Devices")
 }
 
 @Composable
@@ -106,7 +106,7 @@ fun DevicesScreen(mainViewModel: MainViewModel = viewModel()) {
 }
 
 @Composable
-fun ListItem(name: String) {
+fun ListItem(name: String, mainViewModel: MainViewModel = viewModel()) {
     var connectToDeviceBool by remember { mutableStateOf(false)}
     var connectToDeviceName by remember { mutableStateOf("none")}
     Surface(
@@ -145,22 +145,18 @@ fun ListItem(name: String) {
                         Log.d("DD", "Tapped on $name")
                         connectToDeviceName = name
                         connectToDeviceBool = true
+                        mainViewModel.connectedDeviceList.add(name)
                     }) {
-                    Text(text = "Connect")
+                    Text(if (connectToDeviceBool) "Connected" else "Connect")
                 }
             }
         }
 
     }
     if(connectToDeviceBool){
-        ConnectToPolar(name = name)
+        Log.d("DD",mainViewModel.connectedDeviceList.toString())
         connectToDeviceBool = false
     }
-}
-
-@Composable
-fun ConnectToPolar(name: String) {
-    Log.d("DD", "Connecting to $name")
 }
 
 
