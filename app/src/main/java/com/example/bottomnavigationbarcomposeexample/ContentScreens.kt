@@ -37,36 +37,30 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
 var firstDeviceFlag = true
 var firstConnectedDeviceFlag = true
-var deviceListForHomeScreen = mutableStateListOf<String>("No Devices home")
-class MainViewModel : ViewModel() {
-    var deviceList = mutableStateListOf<String>("No Devices")
-    var scanButtonText = mutableStateOf("Start Scan")
-    var connectedDeviceList = mutableStateListOf<String>("No Connected Devices","Is this working?")
-}
+var deviceListForHomeScreen = mutableStateListOf<String>("No Connected Devices")
 
 @Composable
-fun HomeScreen(mainViewModel: MainViewModel = viewModel()) {
+fun HomeScreen() { //not going to pass this guy a view model because it doesn't contain any info anyway
     Log.d("DD","Home screen composable called")
-    Log.d("DD","first device is ${mainViewModel.deviceList[0]}")
-    mainViewModel.deviceList = deviceListForHomeScreen
-    Log.d("DD","now it's ${mainViewModel.deviceList[0]}")
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(colorResource(id = R.color.colorPrimaryDark))
-            .wrapContentSize(Alignment.Center)
+            .wrapContentSize(Alignment.TopCenter)
     ) {
-        Text(
-            text = mainViewModel.deviceList[0],
-            fontWeight = FontWeight.Bold,
-            color = Color.White,
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-            textAlign = TextAlign.Center,
-            fontSize = 25.sp
-        )
+        Button(modifier = Modifier
+            .padding(horizontal = 20.dp, vertical = 20.dp)
+            .fillMaxWidth(1.0f),
+            colors = ButtonDefaults.buttonColors(
+                backgroundColor = colorResource(id = R.color.colorText),
+                contentColor = colorResource(id = R.color.colorPrimaryDark)
+            ),
+            onClick = { /*TODO*/ }) {
+            Text(text = "Start Data Collection")
+        }
         LazyColumn(modifier = Modifier.padding(vertical = 4.dp))
         {
-            items(items = mainViewModel.deviceList){name ->
+            items(items = deviceListForHomeScreen){name: String ->
                 ListConnectedDevice(name = name)
             }
         }
@@ -107,7 +101,7 @@ fun HomeScreenPreview() {
 
 
 @Composable
-fun DevicesScreen(mainViewModel: MainViewModel = viewModel()) {
+fun DevicesScreen(mainViewModel: MainActivity.DeviceViewModel = viewModel()) {
     var scanBLE by remember { mutableStateOf(false) }
     Log.d("DD","first device (according to device screen) is ${mainViewModel.deviceList[0]}")
     Column(
@@ -117,7 +111,7 @@ fun DevicesScreen(mainViewModel: MainViewModel = viewModel()) {
             .wrapContentSize(Alignment.TopCenter)
     ) {
         Button(modifier = Modifier
-            .padding(horizontal = 80.dp, vertical = 20.dp)
+            .padding(horizontal = 20.dp, vertical = 20.dp)
             .fillMaxWidth(1.0f),
             colors = ButtonDefaults.buttonColors(
                 backgroundColor = colorResource(id = R.color.colorText),
@@ -144,7 +138,7 @@ fun DevicesScreen(mainViewModel: MainViewModel = viewModel()) {
 }
 
 @Composable
-fun ListItem(name: String, mainViewModel: MainViewModel = viewModel()) {
+fun ListItem(name: String, mainViewModel: MainActivity.DeviceViewModel = viewModel()) {
     var changeButtonToConnected by remember { mutableStateOf(false)}
     var connectToDeviceName by remember { mutableStateOf("none")}
     Surface(
@@ -185,9 +179,11 @@ fun ListItem(name: String, mainViewModel: MainViewModel = viewModel()) {
                         changeButtonToConnected = true
                         if (firstConnectedDeviceFlag){
                             mainViewModel.connectedDeviceList[0] = name
+                            deviceListForHomeScreen[0] = name
                             firstConnectedDeviceFlag = false
                         } else {
                             mainViewModel.connectedDeviceList.add(name)
+                            deviceListForHomeScreen.add(name)
                         }
                     }) {
                     Text(if (changeButtonToConnected) "Connected" else "Connect")
@@ -201,7 +197,7 @@ fun ListItem(name: String, mainViewModel: MainViewModel = viewModel()) {
 
 @Composable
 @SuppressLint("MissingPermission")
-fun StartScan(startTime: Long, mainViewModel: MainViewModel = viewModel()) {
+fun StartScan(startTime: Long, mainViewModel: MainActivity.DeviceViewModel = viewModel()) {
     Log.d("DD", "Now scanning")
     val context = LocalContext.current
 
@@ -224,7 +220,7 @@ fun StartScan(startTime: Long, mainViewModel: MainViewModel = viewModel()) {
                 }else {
                     mainViewModel.deviceList.add(result.device.name)
                 }
-                deviceListForHomeScreen = mainViewModel.deviceList
+
                 Log.d("DD", "Device Found: ${result.device.name}")
             }
             val elapsedTime = System.currentTimeMillis() - startTime

@@ -39,6 +39,7 @@ import android.Manifest
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
+import androidx.lifecycle.ViewModel
 
 class MainActivity : ComponentActivity() {
     companion object{
@@ -56,6 +57,12 @@ class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.M)
     fun checkBT(){
         requestPermissions(arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.ACCESS_FINE_LOCATION), PERMISSION_REQUEST_CODE)
+    }
+
+    class DeviceViewModel : ViewModel(){
+        var deviceList = mutableStateListOf<String>("No Devices")
+        var scanButtonText = mutableStateOf("Start Scan")
+        var connectedDeviceList = mutableStateListOf<String>("No Connected Devices")
     }
 }
 
