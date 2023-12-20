@@ -28,7 +28,7 @@ private var gyrDisposable: Disposable? = null
 private var magDisposable: Disposable? = null
 private var ppgDisposable: Disposable? = null//LOOK INTO NOT NEEDING THESE
 
-fun GetPolarDeviceIDFromName(name: String) : String{
+fun getPolarDeviceIDFromName(name: String) : String{
     return name.takeLast(8)  //Consider improving, especially if other polar device ID's are diff
 }
 
@@ -38,12 +38,12 @@ private lateinit var gYRFileName: File
 private lateinit var mAGFileName: File
 private lateinit var pPGFileName: File
 
-fun SubscribeToAllPolarData(deviceIdArray: Array<String>, api: PolarBleApi){
+fun subscribeToAllPolarData(deviceIdArray: List<String>, api: PolarBleApi){
     val isDisposed = dcDisposable?.isDisposed ?: true
     if (isDisposed) {
 
         for (deviceId in deviceIdArray) {
-            //setTimeStamp(deviceId, api)
+            setTimeStamp(deviceId, api)
             Log.d(TAG,deviceId)
             subscribeToPolarHR(deviceId, api)
             subscribeToPolarACC(deviceId, api)

@@ -49,8 +49,6 @@ import com.polar.sdk.api.PolarBleApiDefaultImpl
 import com.polar.sdk.api.model.PolarDeviceInfo
 import com.polar.sdk.api.model.PolarHrData
 import java.util.UUID
-import com.example.bottomnavigationbarcomposeexample.SubscribeToAllPolarData
-import java.security.AccessController.getContext
 
 private const val PERMISSION_REQUEST_CODE = 1
 lateinit var api: PolarBleApi

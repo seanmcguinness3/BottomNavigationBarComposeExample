@@ -5,7 +5,9 @@ import android.bluetooth.*
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.content.Context
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -34,11 +36,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 var firstDeviceFlag = true
 var firstConnectedDeviceFlag = true
 var deviceListForHomeScreen = mutableStateListOf<String>("No Connected Devices")
+var deviceIdListForConnection = mutableStateListOf<String>("No Connected ID's")
 
 @Composable
 fun HomeScreen() { //not going to pass this guy a view model because it doesn't contain any info anyway
     Log.d("DD","Home screen composable called")
-
+    var collectingData by remember { mutableStateOf(false)}
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -52,8 +55,9 @@ fun HomeScreen() { //not going to pass this guy a view model because it doesn't 
                 backgroundColor = colorResource(id = R.color.colorText),
                 contentColor = colorResource(id = R.color.colorPrimaryDark)
             ),
-            onClick = { SubscribeToAllPolarData(arrayOf("C19E1A21", "C929ED29"),api) }) {
-            Text(text = "Start Data Collection")
+            onClick = { subscribeToAllPolarData(deviceIdListForConnection.toList(),api)
+            collectingData = !collectingData}) {
+            Text(if (collectingData) "Stop Data Collection" else "Start Data Collection")
         }
         LazyColumn(modifier = Modifier.padding(vertical = 4.dp))
         {
@@ -173,15 +177,17 @@ fun ListItem(name: String, mainViewModel: MainActivity.DeviceViewModel = viewMod
                         Log.d("DD", "Tapped on $name")
                         connectToDeviceName = name
                         changeButtonToConnected = true
-                        val deviceID = GetPolarDeviceIDFromName(name)
+                        val deviceID = getPolarDeviceIDFromName(name)
                         api.connectToDevice(deviceID)
                         if (firstConnectedDeviceFlag){
                             mainViewModel.connectedDeviceList[0] = name
                             deviceListForHomeScreen[0] = name
+                            deviceIdListForConnection[0] = getPolarDeviceIDFromName(name)
                             firstConnectedDeviceFlag = false
                         } else {
                             mainViewModel.connectedDeviceList.add(name)
                             deviceListForHomeScreen.add(name)
+                            deviceIdListForConnection.add(getPolarDeviceIDFromName(name))
                         }
                     }) {
                     Text(if (changeButtonToConnected) "Connected" else "Connect")
