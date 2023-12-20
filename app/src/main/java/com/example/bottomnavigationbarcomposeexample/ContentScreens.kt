@@ -36,14 +36,20 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 var firstDeviceFlag = true
+var firstConnectedDeviceFlag = true
+var deviceListForHomeScreen = mutableStateListOf<String>("No Devices home")
 class MainViewModel : ViewModel() {
     var deviceList = mutableStateListOf<String>("No Devices")
     var scanButtonText = mutableStateOf("Start Scan")
-    var connectedDeviceList = mutableStateListOf<String>("No Devices")
+    var connectedDeviceList = mutableStateListOf<String>("No Connected Devices","Is this working?")
 }
 
 @Composable
 fun HomeScreen(mainViewModel: MainViewModel = viewModel()) {
+    Log.d("DD","Home screen composable called")
+    Log.d("DD","first device is ${mainViewModel.deviceList[0]}")
+    mainViewModel.deviceList = deviceListForHomeScreen
+    Log.d("DD","now it's ${mainViewModel.deviceList[0]}")
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -51,13 +57,45 @@ fun HomeScreen(mainViewModel: MainViewModel = viewModel()) {
             .wrapContentSize(Alignment.Center)
     ) {
         Text(
-            text = "Home View",
+            text = mainViewModel.deviceList[0],
             fontWeight = FontWeight.Bold,
             color = Color.White,
             modifier = Modifier.align(Alignment.CenterHorizontally),
             textAlign = TextAlign.Center,
             fontSize = 25.sp
         )
+        LazyColumn(modifier = Modifier.padding(vertical = 4.dp))
+        {
+            items(items = mainViewModel.deviceList){name ->
+                ListConnectedDevice(name = name)
+            }
+        }
+    }
+}
+
+@Composable
+fun ListConnectedDevice(name: String) {
+    Surface(
+        color = colorResource(id = R.color.colorPrimary),
+        modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)
+    ){
+        Column(
+            modifier = Modifier
+                .padding(10.dp)
+                .fillMaxWidth()
+        ){
+            Row{
+                Column(modifier = Modifier.weight(1f))
+                {
+                    Text(text = "Device", color = colorResource(id = R.color.colorText))
+                    Text(
+                        text = name, style = MaterialTheme.typography.h6.copy(
+                            fontWeight = FontWeight.ExtraBold
+                        ), color = colorResource(id = R.color.colorText)
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -71,6 +109,7 @@ fun HomeScreenPreview() {
 @Composable
 fun DevicesScreen(mainViewModel: MainViewModel = viewModel()) {
     var scanBLE by remember { mutableStateOf(false) }
+    Log.d("DD","first device (according to device screen) is ${mainViewModel.deviceList[0]}")
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -86,7 +125,6 @@ fun DevicesScreen(mainViewModel: MainViewModel = viewModel()) {
             ),
             onClick = {
                 mainViewModel.scanButtonText = mutableStateOf("Scanning...")
-                Log.d("DD", "WORKING")
                 scanBLE = true
             }) {
             Text(text = mainViewModel.scanButtonText.value)
@@ -107,7 +145,7 @@ fun DevicesScreen(mainViewModel: MainViewModel = viewModel()) {
 
 @Composable
 fun ListItem(name: String, mainViewModel: MainViewModel = viewModel()) {
-    var connectToDeviceBool by remember { mutableStateOf(false)}
+    var changeButtonToConnected by remember { mutableStateOf(false)}
     var connectToDeviceName by remember { mutableStateOf("none")}
     Surface(
         color = colorResource(id = R.color.colorPrimary),
@@ -144,18 +182,19 @@ fun ListItem(name: String, mainViewModel: MainViewModel = viewModel()) {
                     onClick = {
                         Log.d("DD", "Tapped on $name")
                         connectToDeviceName = name
-                        connectToDeviceBool = true
-                        mainViewModel.connectedDeviceList.add(name)
+                        changeButtonToConnected = true
+                        if (firstConnectedDeviceFlag){
+                            mainViewModel.connectedDeviceList[0] = name
+                            firstConnectedDeviceFlag = false
+                        } else {
+                            mainViewModel.connectedDeviceList.add(name)
+                        }
                     }) {
-                    Text(if (connectToDeviceBool) "Connected" else "Connect")
+                    Text(if (changeButtonToConnected) "Connected" else "Connect")
                 }
             }
         }
 
-    }
-    if(connectToDeviceBool){
-        Log.d("DD",mainViewModel.connectedDeviceList.toString())
-        connectToDeviceBool = false
     }
 }
 
@@ -185,6 +224,7 @@ fun StartScan(startTime: Long, mainViewModel: MainViewModel = viewModel()) {
                 }else {
                     mainViewModel.deviceList.add(result.device.name)
                 }
+                deviceListForHomeScreen = mainViewModel.deviceList
                 Log.d("DD", "Device Found: ${result.device.name}")
             }
             val elapsedTime = System.currentTimeMillis() - startTime
