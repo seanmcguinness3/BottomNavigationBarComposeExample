@@ -30,7 +30,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.bottomnavigationbarcomposeexample.SubscribeToPolarTopLevel
 
 var firstDeviceFlag = true
 var firstConnectedDeviceFlag = true
@@ -53,7 +52,7 @@ fun HomeScreen() { //not going to pass this guy a view model because it doesn't 
                 backgroundColor = colorResource(id = R.color.colorText),
                 contentColor = colorResource(id = R.color.colorPrimaryDark)
             ),
-            onClick = { MainActivity.DeviceViewModel }) {
+            onClick = { SubscribeToAllPolarData(arrayOf("C19E1A21", "C929ED29"),api) }) {
             Text(text = "Start Data Collection")
         }
         LazyColumn(modifier = Modifier.padding(vertical = 4.dp))
@@ -101,7 +100,6 @@ fun HomeScreenPreview() {
 @Composable
 fun DevicesScreen(mainViewModel: MainActivity.DeviceViewModel = viewModel()) {
     var scanBLE by remember { mutableStateOf(false) }
-    Log.d("DD","first device (according to device screen) is ${mainViewModel.deviceList[0]}")
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -175,6 +173,8 @@ fun ListItem(name: String, mainViewModel: MainActivity.DeviceViewModel = viewMod
                         Log.d("DD", "Tapped on $name")
                         connectToDeviceName = name
                         changeButtonToConnected = true
+                        val deviceID = GetPolarDeviceIDFromName(name)
+                        api.connectToDevice(deviceID)
                         if (firstConnectedDeviceFlag){
                             mainViewModel.connectedDeviceList[0] = name
                             deviceListForHomeScreen[0] = name

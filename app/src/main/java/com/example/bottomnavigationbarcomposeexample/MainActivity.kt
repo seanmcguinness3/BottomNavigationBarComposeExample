@@ -52,6 +52,8 @@ import java.util.UUID
 import com.example.bottomnavigationbarcomposeexample.SubscribeToAllPolarData
 import java.security.AccessController.getContext
 
+private const val PERMISSION_REQUEST_CODE = 1
+lateinit var api: PolarBleApi
 class MainActivity : ComponentActivity() {
 
     @RequiresApi(Build.VERSION_CODES.M)
@@ -61,6 +63,7 @@ class MainActivity : ComponentActivity() {
             MainScreen()
         }
         checkBT()
+        api = getApi(applicationContext)
         api.setApiCallback(object : PolarBleApiCallback() {
             override fun blePowerStateChanged(powered: Boolean) {
                 //SEE IF WE NEED THIS
@@ -99,32 +102,27 @@ class MainActivity : ComponentActivity() {
         var connectedDeviceList = mutableStateListOf<String>("No Connected Devices")
     }
 
-    class PolarApi{
-        val api: PolarBleApi by lazy{
-            PolarBleApiDefaultImpl.defaultImplementation(
-                MainActivity.DeviceViewModel.context, setOf(
-                    PolarBleApi.PolarBleSdkFeature.FEATURE_HR,
-                    PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_SDK_MODE,
-                    PolarBleApi.PolarBleSdkFeature.FEATURE_BATTERY_INFO,
-                    PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_H10_EXERCISE_RECORDING,
-                    PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_OFFLINE_RECORDING,
-                    PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING,
-                    PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_DEVICE_TIME_SETUP,
-                    PolarBleApi.PolarBleSdkFeature.FEATURE_DEVICE_INFO,
-                    PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_LED_ANIMATION
-                )
-            )
-        }
-        fun SubscribeToPolarTopLevel(){
-            SubscribeToAllPolarData(arrayOf("C19E1A21", "C929ED29"),api)
-        }
-    }
-
-
-
 }
 
 
+fun getApi(context: Context) : PolarBleApi{
+    val api: PolarBleApi by lazy{
+        PolarBleApiDefaultImpl.defaultImplementation(
+            context, setOf(
+                PolarBleApi.PolarBleSdkFeature.FEATURE_HR,
+                PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_SDK_MODE,
+                PolarBleApi.PolarBleSdkFeature.FEATURE_BATTERY_INFO,
+                PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_H10_EXERCISE_RECORDING,
+                PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_OFFLINE_RECORDING,
+                PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING,
+                PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_DEVICE_TIME_SETUP,
+                PolarBleApi.PolarBleSdkFeature.FEATURE_DEVICE_INFO,
+                PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_LED_ANIMATION
+            )
+        )
+    }
+    return api
+}
 
 @Composable
 fun MainScreen() {

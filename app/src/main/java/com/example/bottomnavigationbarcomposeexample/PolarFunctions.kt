@@ -28,20 +28,30 @@ private var gyrDisposable: Disposable? = null
 private var magDisposable: Disposable? = null
 private var ppgDisposable: Disposable? = null//LOOK INTO NOT NEEDING THESE
 
+fun GetPolarDeviceIDFromName(name: String) : String{
+    return name.takeLast(8)  //Consider improving, especially if other polar device ID's are diff
+}
+
+private lateinit var hRFileName: File
+private lateinit var aCCFileName: File
+private lateinit var gYRFileName: File
+private lateinit var mAGFileName: File
+private lateinit var pPGFileName: File
 
 fun SubscribeToAllPolarData(deviceIdArray: Array<String>, api: PolarBleApi){
     val isDisposed = dcDisposable?.isDisposed ?: true
     if (isDisposed) {
 
         for (deviceId in deviceIdArray) {
-            setTimeStamp(deviceId, api)
+            //setTimeStamp(deviceId, api)
+            Log.d(TAG,deviceId)
             subscribeToPolarHR(deviceId, api)
             subscribeToPolarACC(deviceId, api)
             subscribeToPolarGYR(deviceId, api)
             subscribeToPolarMAG(deviceId, api)
             subscribeToPolarPPG(deviceId, api)
 
-            /*
+
             hRFileName = generateNewFile("$deviceId-HRData.txt")
             aCCFileName = generateNewFile("$deviceId-ACCData.txt")
             gYRFileName = generateNewFile("$deviceId-GYRData.txt")
@@ -53,7 +63,7 @@ fun SubscribeToAllPolarData(deviceIdArray: Array<String>, api: PolarBleApi){
             gYRFileName.appendText("Phone timestamp;sensor timestamp [ns];X [dps];Y [dps];Z [dps] \n")
             mAGFileName.appendText("Phone timestamp;sensor timestamp [ns];X [G];Y [G];Z [G] \n")
             pPGFileName.appendText("Phone timestamp;sensor timestamp [ns];channel 0;channel 1;channel 2;ambient \n")
-            */
+
         }
 
     } else {
