@@ -36,15 +36,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.core.app.ActivityCompat.requestPermissions
 import android.Manifest
+import android.content.ContentProvider
 import android.os.Build
+import android.os.PersistableBundle
 import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.lifecycle.ViewModel
+import com.polar.sdk.api.PolarBleApi
+import com.polar.sdk.api.PolarBleApiCallback
+import com.polar.sdk.api.PolarBleApiDefaultImpl
+import com.polar.sdk.api.model.PolarDeviceInfo
+import com.polar.sdk.api.model.PolarHrData
+import java.util.UUID
+import com.example.bottomnavigationbarcomposeexample.SubscribeToAllPolarData
+import java.security.AccessController.getContext
 
 class MainActivity : ComponentActivity() {
-    companion object{
-        private const val PERMISSION_REQUEST_CODE = 1
-    }
+
     @RequiresApi(Build.VERSION_CODES.M)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,6 +61,31 @@ class MainActivity : ComponentActivity() {
             MainScreen()
         }
         checkBT()
+        api.setApiCallback(object : PolarBleApiCallback() {
+            override fun blePowerStateChanged(powered: Boolean) {
+                //SEE IF WE NEED THIS
+            }
+            override fun deviceConnected(polarDeviceInfo: PolarDeviceInfo) {
+                //SEE IF WE NEED THIS
+            }
+            override fun deviceConnecting(polarDeviceInfo: PolarDeviceInfo) {
+                //SEE IF WE NEED THIS
+            }
+            override fun deviceDisconnected(polarDeviceInfo: PolarDeviceInfo) {
+                //SEE IF WE NEED THIS
+            }
+            override fun disInformationReceived(identifier: String, uuid: UUID, value: String) {
+                //SEE IF WE NEED THIS
+            }
+            override fun batteryLevelReceived(identifier: String, level: Int) {
+                //SEE IF WE NEED THIS
+            }
+            override fun hrNotificationReceived(
+                identifier: String, data: PolarHrData.PolarHrSample
+            ) {
+                // //SEE IF WE NEED THIS
+            }
+        })
     }
 
     @RequiresApi(Build.VERSION_CODES.M)
@@ -64,7 +98,33 @@ class MainActivity : ComponentActivity() {
         var scanButtonText = mutableStateOf("Start Scan")
         var connectedDeviceList = mutableStateListOf<String>("No Connected Devices")
     }
+
+    class PolarApi{
+        val api: PolarBleApi by lazy{
+            PolarBleApiDefaultImpl.defaultImplementation(
+                MainActivity.DeviceViewModel.context, setOf(
+                    PolarBleApi.PolarBleSdkFeature.FEATURE_HR,
+                    PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_SDK_MODE,
+                    PolarBleApi.PolarBleSdkFeature.FEATURE_BATTERY_INFO,
+                    PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_H10_EXERCISE_RECORDING,
+                    PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_OFFLINE_RECORDING,
+                    PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING,
+                    PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_DEVICE_TIME_SETUP,
+                    PolarBleApi.PolarBleSdkFeature.FEATURE_DEVICE_INFO,
+                    PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_LED_ANIMATION
+                )
+            )
+        }
+        fun SubscribeToPolarTopLevel(){
+            SubscribeToAllPolarData(arrayOf("C19E1A21", "C929ED29"),api)
+        }
+    }
+
+
+
 }
+
+
 
 @Composable
 fun MainScreen() {

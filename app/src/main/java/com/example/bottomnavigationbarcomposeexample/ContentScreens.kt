@@ -24,16 +24,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.bottomnavigationbarcomposeexample.SubscribeToPolarTopLevel
 
 var firstDeviceFlag = true
 var firstConnectedDeviceFlag = true
@@ -42,6 +39,7 @@ var deviceListForHomeScreen = mutableStateListOf<String>("No Connected Devices")
 @Composable
 fun HomeScreen() { //not going to pass this guy a view model because it doesn't contain any info anyway
     Log.d("DD","Home screen composable called")
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -55,7 +53,7 @@ fun HomeScreen() { //not going to pass this guy a view model because it doesn't 
                 backgroundColor = colorResource(id = R.color.colorText),
                 contentColor = colorResource(id = R.color.colorPrimaryDark)
             ),
-            onClick = { /*TODO*/ }) {
+            onClick = { MainActivity.DeviceViewModel }) {
             Text(text = "Start Data Collection")
         }
         LazyColumn(modifier = Modifier.padding(vertical = 4.dp))
