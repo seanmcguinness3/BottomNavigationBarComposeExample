@@ -38,7 +38,7 @@ private lateinit var gYRFileName: File
 private lateinit var mAGFileName: File
 private lateinit var pPGFileName: File
 
-fun subscribeToAllPolarData(deviceIdArray: List<String>, api: PolarBleApi){
+fun subscribeToAllPolarData(deviceIdArray: List<String>, api: PolarBleApi, printLogCat: Boolean){
     val isDisposed = dcDisposable?.isDisposed ?: true
     if (isDisposed) {
 
