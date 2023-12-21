@@ -176,7 +176,7 @@ fun ListItem(name: String, mainViewModel: MainActivity.DeviceViewModel = viewMod
                     onClick = {
                         Log.d("DD", "Tapped on $name")
                         connectToDeviceName = name
-                        changeButtonToConnected = true
+                        changeButtonToConnected = !changeButtonToConnected
                         val deviceID = getPolarDeviceIDFromName(name)
                         api.connectToDevice(deviceID)
                         if (firstConnectedDeviceFlag){
@@ -217,15 +217,21 @@ fun StartScan(startTime: Long, mainViewModel: MainActivity.DeviceViewModel = vie
     val listScanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             super.onScanResult(callbackType, result)
+            var notInList = true
+            for (deviceInListName in mainViewModel.deviceList){
+                if (result.device.name == deviceInListName) notInList = false
+            }
             if (result.device.name != null) {
-                if (firstDeviceFlag){
-                    mainViewModel.deviceList[0] = result.device.name
-                    firstDeviceFlag = false 
-                }else {
-                    mainViewModel.deviceList.add(result.device.name)
-                }
+                if (result.device.name.contains("Polar") && notInList) {
+                    if (firstDeviceFlag) {
+                        mainViewModel.deviceList[0] = result.device.name
+                        firstDeviceFlag = false
+                    } else {
+                        mainViewModel.deviceList.add(result.device.name)
+                    }
 
-                Log.d("DD", "Device Found: ${result.device.name}")
+                    Log.d("DD", "Device Found: ${result.device.name}")
+                }
             }
             val elapsedTime = System.currentTimeMillis() - startTime
 
