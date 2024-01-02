@@ -56,7 +56,7 @@ fun HomeScreen() { //not going to pass this guy a view model because it doesn't 
                 backgroundColor = colorResource(id = R.color.colorText),
                 contentColor = colorResource(id = R.color.colorPrimaryDark)
             ),
-            onClick = { thread { subscribeToAllPolarData(deviceIdListForConnection.toList(),api) }
+            onClick = { thread { subscribeToAllPolarData(deviceIdListForConnection.toList(),api,false) }
             collectingData = !collectingData}) {
             Text(if (collectingData) "Stop Data Collection" else "Start Data Collection")
         }

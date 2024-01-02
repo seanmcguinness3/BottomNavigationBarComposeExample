@@ -16,6 +16,7 @@ import com.polar.sdk.api.model.PolarHrData
 import com.polar.sdk.api.model.PolarMagnetometerData
 import com.polar.sdk.api.model.PolarPpgData
 import com.polar.sdk.api.model.PolarSensorSetting
+import io.reactivex.rxjava3.schedulers.Schedulers
 import java.io.File
 import java.util.EnumMap
 import java.util.UUID
@@ -45,11 +46,11 @@ fun subscribeToAllPolarData(deviceIdArray: List<String>, api: PolarBleApi, print
         for (deviceId in deviceIdArray) {
             setTimeStamp(deviceId, api)
             Log.d(TAG,deviceId)
-            subscribeToPolarHR(deviceId, api)
-            subscribeToPolarACC(deviceId, api)
-            subscribeToPolarGYR(deviceId, api)
-            subscribeToPolarMAG(deviceId, api)
-            subscribeToPolarPPG(deviceId, api)
+            subscribeToPolarHR(deviceId, api, printLogCat)
+            subscribeToPolarACC(deviceId, api, printLogCat)
+            subscribeToPolarGYR(deviceId, api, printLogCat)
+            subscribeToPolarMAG(deviceId, api, printLogCat)
+            subscribeToPolarPPG(deviceId, api, printLogCat)
 
 
             hRFileName = generateNewFile("$deviceId-HRData.txt")
@@ -75,18 +76,18 @@ private fun setTimeStamp(deviceIDforFunc: String, api: PolarBleApi){
     val rightNow = Calendar.getInstance()
     rightNow.time = Date()
     api.setLocalTime(deviceIDforFunc,rightNow)
-        .observeOn(AndroidSchedulers.mainThread())
+        .observeOn(Schedulers.io())
         .subscribe()
 }
 
-private fun subscribeToPolarHR(deviceIDforFunc: String, api: PolarBleApi) {
+private fun subscribeToPolarHR(deviceIDforFunc: String, api: PolarBleApi, printLogCat: Boolean) {
     var newDisposable: Disposable = //LOOK INTO NOT NEEDING THIS
-        api.startHrStreaming(deviceIDforFunc).observeOn(AndroidSchedulers.mainThread())
+        api.startHrStreaming(deviceIDforFunc).observeOn(Schedulers.io())
             .subscribe({ hrData: PolarHrData ->
                 for (sample in hrData.samples) {
                     val logString =
                         "$deviceIDforFunc  HR   bpm: ${sample.hr} rrs: ${sample.rrsMs} rrAvailable: ${sample.rrAvailable} contactStatus: ${sample.contactStatus} contactStatusSupported: ${sample.contactStatusSupported}"
-                    Log.d(TAG, logString)
+                    if (printLogCat) {Log.d(TAG, logString)}
                     val fileString = "${System.currentTimeMillis()};${sample.hr}"
                     val file = File("${getSaveFolder().absolutePath}/$deviceIDforFunc-HRData.txt \n")
                     file.appendText(fileString)
@@ -96,7 +97,7 @@ private fun subscribeToPolarHR(deviceIDforFunc: String, api: PolarBleApi) {
             }, { Log.d(TAG, "HR stream complete") })
 }
 
-private fun subscribeToPolarACC(deviceIDforFunc: String, api: PolarBleApi) {
+private fun subscribeToPolarACC(deviceIDforFunc: String, api: PolarBleApi, printLogCat: Boolean) {
     val accSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
         EnumMap(PolarSensorSetting.SettingType::class.java)
     accSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] = 52
@@ -105,21 +106,22 @@ private fun subscribeToPolarACC(deviceIDforFunc: String, api: PolarBleApi) {
     accSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 3
     val accSettings = PolarSensorSetting(accSettingsMap)
     accDisposable = api.startAccStreaming(deviceIDforFunc, accSettings)
-        .observeOn(AndroidSchedulers.mainThread())
+        //.observeOn(AndroidSchedulers.mainThread())
+        .observeOn(Schedulers.io())
         .subscribe({ accData: PolarAccelerometerData ->
             for (data in accData.samples) {
                 val logString = "$deviceIDforFunc ACC    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}"
                 val file = File("${getSaveFolder().absolutePath}/$deviceIDforFunc-ACCData.txt")
                 val fileString = "${System.currentTimeMillis()};${data.timeStamp};${data.x};${data.y};${data.z}; \n"
                 file.appendText(fileString)
-                Log.d(TAG, logString)
+                if (printLogCat){Log.d(TAG, logString)}
             }
         }, { error: Throwable ->
             Log.e(TAG, "Acc stream failed because $error")
         }, { Log.d(TAG, "acc stream complete") })
 }
 
-private fun subscribeToPolarGYR(deviceIDforFunc: String, api: PolarBleApi) {
+private fun subscribeToPolarGYR(deviceIDforFunc: String, api: PolarBleApi, printLogCat: Boolean) {
     val gyrSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
         EnumMap(PolarSensorSetting.SettingType::class.java)
     gyrSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] = 52
@@ -128,11 +130,12 @@ private fun subscribeToPolarGYR(deviceIDforFunc: String, api: PolarBleApi) {
     gyrSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 3
     val gyrSettings = PolarSensorSetting(gyrSettingsMap)
     gyrDisposable =
-        api.startGyroStreaming(deviceIDforFunc, gyrSettings).observeOn(AndroidSchedulers.mainThread())
+        //SEAN WHEN YOU START WORKING ON THIS READ THE BELOW
+        api.startGyroStreaming(deviceIDforFunc, gyrSettings).observeOn(Schedulers.io()) //I think changing this from .mainthread to .io, for the most part, fixed the UI sensitivity issue. Change the rest. There's still a fuckton of bugs.
             .subscribe({ gyrData: PolarGyroData ->
                 for (data in gyrData.samples) {
                     val logString = "$deviceIDforFunc GYR    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}"
-                    Log.d(TAG, logString)
+                    if (printLogCat){Log.d(TAG, logString)}
                     val fileString = "${System.currentTimeMillis()};${data.timeStamp};${data.x};${data.y};${data.z} \n"
                     val file = File("${getSaveFolder().absolutePath}/$deviceIDforFunc-GYRData.txt")
                     file.appendText(fileString)
@@ -142,7 +145,7 @@ private fun subscribeToPolarGYR(deviceIDforFunc: String, api: PolarBleApi) {
             }, { Log.d(TAG, "GYR stream complete") })
 }
 
-private fun subscribeToPolarMAG(deviceIDforFunc: String, api: PolarBleApi) {
+private fun subscribeToPolarMAG(deviceIDforFunc: String, api: PolarBleApi, printLogCat: Boolean) {
     val magSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
         EnumMap(PolarSensorSetting.SettingType::class.java)
     magSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] = 20
@@ -155,7 +158,7 @@ private fun subscribeToPolarMAG(deviceIDforFunc: String, api: PolarBleApi) {
         .subscribe({ polarMagData: PolarMagnetometerData ->
             for (data in polarMagData.samples) {
                 val logString = "$deviceIDforFunc MAG    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}"
-                Log.d(TAG,logString)
+                if(printLogCat) {Log.d(TAG,logString)}
                 val fileString = "${System.currentTimeMillis()};${data.timeStamp};${data.x};${data.y};${data.z} \n"
                 val file = File("${getSaveFolder().absolutePath}/$deviceIDforFunc-MAGData.txt")
                 file.appendText(fileString)
@@ -165,7 +168,7 @@ private fun subscribeToPolarMAG(deviceIDforFunc: String, api: PolarBleApi) {
         }, { Log.d(TAG, "MAGNETOMETER stream complete") })
 }
 
-private fun subscribeToPolarPPG(deviceIDforFunc: String, api: PolarBleApi) {
+private fun subscribeToPolarPPG(deviceIDforFunc: String, api: PolarBleApi, printLogCat: Boolean) {
     val ppgSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
         EnumMap(PolarSensorSetting.SettingType::class.java)
     ppgSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] = 135 //sensors appear to have different sample rates for ppg.
@@ -180,7 +183,7 @@ private fun subscribeToPolarPPG(deviceIDforFunc: String, api: PolarBleApi) {
             if (polarPpgData.type == PolarPpgData.PpgDataType.PPG3_AMBIENT1) {
                 for (data in polarPpgData.samples) {
                     val logString = "$deviceIDforFunc PPG    ppg0: ${data.channelSamples[0]} ppg1: ${data.channelSamples[1]} ppg2: ${data.channelSamples[2]} ambient: ${data.channelSamples[3]} timeStamp: ${data.timeStamp}"
-                    Log.d(TAG, logString)
+                    if(printLogCat) {Log.d(TAG, logString)}
                     val fileString = "${System.currentTimeMillis()};${data.timeStamp};${data.channelSamples[0]};${data.channelSamples[1]};${data.channelSamples[2]};${data.channelSamples[3]} \n"
                     val file = File("${getSaveFolder().absolutePath}/$deviceIDforFunc-PPGData.txt")
                     file.appendText(fileString)
