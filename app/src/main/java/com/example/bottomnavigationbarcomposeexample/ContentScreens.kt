@@ -38,6 +38,7 @@ var firstDeviceFlag = true
 var firstConnectedDeviceFlag = true
 var deviceListForHomeScreen = mutableStateListOf<String>("No Connected Devices")
 var deviceIdListForConnection = mutableStateListOf<String>("No Connected ID's")
+lateinit var voMaster: BluetoothDevice
 
 @Composable
 fun HomeScreen() { //not going to pass this guy a view model because it doesn't contain any info anyway
@@ -56,7 +57,8 @@ fun HomeScreen() { //not going to pass this guy a view model because it doesn't 
                 backgroundColor = colorResource(id = R.color.colorText),
                 contentColor = colorResource(id = R.color.colorPrimaryDark)
             ),
-            onClick = { thread { subscribeToAllPolarData(deviceIdListForConnection.toList(),api,false) }
+            onClick = { subscribeToAllPolarData(deviceIdListForConnection.toList(),api,false)
+            subscribeToVOMaster(voMaster, context = context)
             collectingData = !collectingData}) {
             Text(if (collectingData) "Stop Data Collection" else "Start Data Collection")
         }
@@ -223,6 +225,7 @@ fun StartScan(startTime: Long, mainViewModel: MainActivity.DeviceViewModel = vie
                 if (result.device.name == deviceInListName) notInList = false
             }
             if (result.device.name != null) {
+                //sean voMaster this is were to set the voMaster variable
                 if (result.device.name.contains("Polar") && notInList) {
                     if (firstDeviceFlag) {
                         mainViewModel.deviceList[0] = result.device.name

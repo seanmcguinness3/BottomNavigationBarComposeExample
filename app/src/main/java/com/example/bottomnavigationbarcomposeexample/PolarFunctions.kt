@@ -154,7 +154,7 @@ private fun subscribeToPolarMAG(deviceIDforFunc: String, api: PolarBleApi, print
     magSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 3
     val magSettings = PolarSensorSetting(magSettingsMap)
     magDisposable = api.startMagnetometerStreaming(deviceIDforFunc, magSettings)
-        .observeOn(AndroidSchedulers.mainThread())
+        .observeOn(Schedulers.io())
         .subscribe({ polarMagData: PolarMagnetometerData ->
             for (data in polarMagData.samples) {
                 val logString = "$deviceIDforFunc MAG    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}"
@@ -178,8 +178,10 @@ private fun subscribeToPolarPPG(deviceIDforFunc: String, api: PolarBleApi, print
     ppgSettingsMap[PolarSensorSetting.SettingType.RESOLUTION] = 22
     ppgSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 4
     val ppgSettings = PolarSensorSetting(ppgSettingsMap)
-    ppgDisposable =
-        api.startPpgStreaming(deviceIDforFunc, ppgSettings).subscribe({ polarPpgData: PolarPpgData ->
+    ppgDisposable = //Not sure why but this one is missing the .observeon(schedulers.io()). take a second look while testin
+        api.startPpgStreaming(deviceIDforFunc, ppgSettings)
+            .observeOn(Schedulers.io()) //I just added it in but is wasn't here before
+            .subscribe({ polarPpgData: PolarPpgData ->
             if (polarPpgData.type == PolarPpgData.PpgDataType.PPG3_AMBIENT1) {
                 for (data in polarPpgData.samples) {
                     val logString = "$deviceIDforFunc PPG    ppg0: ${data.channelSamples[0]} ppg1: ${data.channelSamples[1]} ppg2: ${data.channelSamples[2]} ambient: ${data.channelSamples[3]} timeStamp: ${data.timeStamp}"

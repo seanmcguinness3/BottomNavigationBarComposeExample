@@ -52,6 +52,7 @@ import java.util.UUID
 
 private const val PERMISSION_REQUEST_CODE = 1
 lateinit var api: PolarBleApi
+lateinit var context: Context
 class MainActivity : ComponentActivity() {
 
     @RequiresApi(Build.VERSION_CODES.M)
@@ -61,6 +62,7 @@ class MainActivity : ComponentActivity() {
             MainScreen()
         }
         checkBT()
+        context = applicationContext
         api = getApi(applicationContext)
         api.setApiCallback(object : PolarBleApiCallback() {
             override fun blePowerStateChanged(powered: Boolean) {
