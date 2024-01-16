@@ -169,8 +169,8 @@ fun ListItem(name: String, mainViewModel: MainActivity.DeviceViewModel = viewMod
                         ), color = colorResource(id = R.color.colorText)
                     )
                 }
-
-                OutlinedButton(modifier = Modifier
+                //SINGLE DEVICE CONNECT BUTTON
+                OutlinedButton(modifier = Modifier 
                     .padding(horizontal = 20.dp),
                     colors = ButtonDefaults.buttonColors(
                         backgroundColor = colorResource(R.color.colorText),
@@ -180,19 +180,24 @@ fun ListItem(name: String, mainViewModel: MainActivity.DeviceViewModel = viewMod
                     ),
                     onClick = {
                         Log.d("DD", "Tapped on $name")
-                        connectToDeviceName = name
+                        connectToDeviceName = name  //at some point try deleting this variable, idk what it's doing, something with remember
                         changeButtonToConnected = !changeButtonToConnected
-                        val deviceID = getPolarDeviceIDFromName(name)
-                        api.connectToDevice(deviceID)
-                        if (firstConnectedDeviceFlag) {
-                            mainViewModel.connectedDeviceList[0] = name
-                            deviceListForHomeScreen[0] = name
-                            deviceIdListForConnection[0] = getPolarDeviceIDFromName(name)
-                            firstConnectedDeviceFlag = false
+
+                        if (name.contains("Polar")){
+                            val deviceID = getPolarDeviceIDFromName(name)
+                            api.connectToDevice(deviceID)
+                            if (firstConnectedDeviceFlag) {
+                                mainViewModel.connectedDeviceList[0] = name
+                                deviceListForHomeScreen[0] = name
+                                deviceIdListForConnection[0] = getPolarDeviceIDFromName(name)
+                                firstConnectedDeviceFlag = false
+                            } else {
+                                mainViewModel.connectedDeviceList.add(name)
+                                deviceListForHomeScreen.add(name)
+                                deviceIdListForConnection.add(getPolarDeviceIDFromName(name))
+                            }
                         } else {
-                            mainViewModel.connectedDeviceList.add(name)
-                            deviceListForHomeScreen.add(name)
-                            deviceIdListForConnection.add(getPolarDeviceIDFromName(name))
+                            voMaster = name
                         }
                     }) {
                     Text(if (changeButtonToConnected) "Connected" else "Connect")
@@ -228,7 +233,7 @@ fun StartScan(startTime: Long, mainViewModel: MainActivity.DeviceViewModel = vie
             }
             if (result.device.name != null) {
                 //sean voMaster this is were to set the voMaster variable
-                if (result.device.name.contains("Polar") && notInList) {
+                if ((result.device.name.contains("Polar") || result.device.name.contains("VO2 Master")) && notInList) {
                     if (firstDeviceFlag) {
                         mainViewModel.deviceList[0] = result.device.name
                         firstDeviceFlag = false
