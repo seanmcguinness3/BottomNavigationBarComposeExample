@@ -34,10 +34,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlin.concurrent.thread
 
+public const val emptyPolarIDListString = "No Connected ID's"
+
 var firstDeviceFlag = true
 var firstConnectedDeviceFlag = true
 var deviceListForHomeScreen = mutableStateListOf<String>("No Connected Devices")
-var deviceIdListForConnection = mutableStateListOf<String>("No Connected ID's")
+var polarDeviceIdListForConnection = mutableStateListOf<String>(emptyPolarIDListString)
 lateinit var voMaster: BluetoothDevice
 
 @Composable
@@ -58,7 +60,7 @@ fun HomeScreen() { //not going to pass this guy a view model because it doesn't 
                 contentColor = colorResource(id = R.color.colorPrimaryDark)
             ),
             onClick = {
-                subscribeToAllPolarData(deviceIdListForConnection.toList(), api, false)
+                subscribeToAllPolarData(polarDeviceIdListForConnection.toList(), api, false)
                 subscribeToVOMaster(voMaster, context = context)
                 collectingData = !collectingData
             }) {
@@ -187,17 +189,28 @@ fun ListItem(name: String, mainViewModel: MainActivity.DeviceViewModel = viewMod
                             val deviceID = getPolarDeviceIDFromName(name)
                             api.connectToDevice(deviceID)
                             if (firstConnectedDeviceFlag) {
-                                mainViewModel.connectedDeviceList[0] = name
+                                mainViewModel.connectedDeviceList[0] = name //try deleting connectedDeviceList, it's not being used by anything
                                 deviceListForHomeScreen[0] = name
-                                deviceIdListForConnection[0] = getPolarDeviceIDFromName(name)
+                                polarDeviceIdListForConnection[0] = getPolarDeviceIDFromName(name)
                                 firstConnectedDeviceFlag = false
                             } else {
                                 mainViewModel.connectedDeviceList.add(name)
                                 deviceListForHomeScreen.add(name)
-                                deviceIdListForConnection.add(getPolarDeviceIDFromName(name))
+                                polarDeviceIdListForConnection.add(getPolarDeviceIDFromName(name))
                             }
                         } else {
-                            voMaster = name
+                            //voMaster = name
+                            //^^this would be the ideal structure, but need to figure out how to go from
+                            //name string back to BluetoothDevice in order for this to work
+                            //for now voMaster is set during the scan callback
+                            if(firstConnectedDeviceFlag){
+                                mainViewModel.connectedDeviceList[0] = name
+                                deviceListForHomeScreen[0] = name
+                                firstConnectedDeviceFlag = false
+                            } else {
+                                mainViewModel.connectedDeviceList.add(name)
+                                deviceListForHomeScreen.add(name)
+                            }
                         }
                     }) {
                     Text(if (changeButtonToConnected) "Connected" else "Connect")
@@ -240,7 +253,12 @@ fun StartScan(startTime: Long, mainViewModel: MainActivity.DeviceViewModel = vie
                     } else {
                         mainViewModel.deviceList.add(result.device.name)
                     }
-
+                    //ISSUE HERE: I'm directly setting this variable on the scan, for non polar device.
+                    //This is because for polar devices, the api allows you to get the BluetoothDevice from the name
+                    //I don't know how to do that for non polar devices, but If i figure that out i can get rid of this
+                    if (result.device.name.contains("VO2 Master")){
+                        voMaster = result.device
+                    }
                     Log.d("DD", "Device Found: ${result.device.name}")
                 }
             }
@@ -255,7 +273,6 @@ fun StartScan(startTime: Long, mainViewModel: MainActivity.DeviceViewModel = vie
             }
         }
     }
-
     bleScanner.startScan(listScanCallback)
 }
 

@@ -19,8 +19,17 @@ private const val TAG = "TAG"
 
 // THESE ARE FOR THE V02 MAX SENSOR
 private const val VO2_SERVICE_UUID = "00001523-1212-EFDE-1523-785FEABCD123"
-private const val CHAR_FOR_NOTIFY_UUID = "00001527-1212-EFDE-1523-785FEABCD123"
+private const val CHAR_FOR_NOTIFY_UUID_1526 = "00001526-1212-EFDE-1523-785FEABCD123"
+private const val CHAR_FOR_NOTIFY_UUID_1527 = "00001527-1212-EFDE-1523-785FEABCD123"
+private const val CHAR_FOR_NOTIFY_UUID_1528 = "00001528-1212-EFDE-1523-785FEABCD123"
+private const val CHAR_FOR_NOTIFY_UUID_1529 = "00001529-1212-EFDE-1523-785FEABCD123"
+private val CHAR_ARRAY_FOR_NOTIFY_UUID = arrayOf(CHAR_FOR_NOTIFY_UUID_1526, CHAR_FOR_NOTIFY_UUID_1527, CHAR_FOR_NOTIFY_UUID_1528, CHAR_FOR_NOTIFY_UUID_1529)
 private const val CCC_DESCRIPTOR_UUID = "00002902-0000-1000-8000-00805F9B34FB"
+
+private var notifyIterator = 1
+private var secondNotifyConnected = false
+private var thirdNotifyConnected = false
+
 
 @SuppressLint("MissingPermission")
 fun subscribeToVOMaster(device: BluetoothDevice, context: Context){
@@ -76,15 +85,23 @@ private val gattCallback = object :BluetoothGattCallback(){
             gatt.disconnect()
             return
         }
-        subscribeToNotifications(service.getCharacteristic(UUID.fromString(CHAR_FOR_NOTIFY_UUID)),gatt)
+        subscribeToNotifications(service.getCharacteristic(UUID.fromString(CHAR_FOR_NOTIFY_UUID_1526)),gatt)
     }
 
-    override fun onDescriptorWrite(
-        gatt: BluetoothGatt?,
-        descriptor: BluetoothGattDescriptor?,
-        status: Int
-    ) {
-        super.onDescriptorWrite(gatt, descriptor, status) //sean implement this when you need to do multiple services from the v02 max sensor
+    override fun onDescriptorWrite(gatt: BluetoothGatt?, descriptor: BluetoothGattDescriptor?, status: Int) {
+        super.onDescriptorWrite(gatt, descriptor, status) //implement this when you need to do multiple services from the v02 max sensor
+        if (notifyIterator <= 3){
+            Log.d("DD","notifyIterator = $notifyIterator, connecting to ${CHAR_ARRAY_FOR_NOTIFY_UUID[notifyIterator]}")
+            val service = gatt!!.getService(UUID.fromString(VO2_SERVICE_UUID))
+            subscribeToNotifications(service.getCharacteristic(UUID.fromString(CHAR_ARRAY_FOR_NOTIFY_UUID[notifyIterator])),gatt)
+            notifyIterator++
+        }
+
+/*        if (notifyIterator == 1){
+            Log.d("DD", "connecting to 1527")
+            val service = gatt!!.getService(UUID.fromString(VO2_SERVICE_UUID))
+            subscribeToNotifications(service.getCharacteristic(UUID.fromString(CHAR_FOR_NOTIFY_UUID_1527)),gatt)
+        }*/
     }
 
     override fun onCharacteristicChanged(

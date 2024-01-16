@@ -44,6 +44,9 @@ fun subscribeToAllPolarData(deviceIdArray: List<String>, api: PolarBleApi, print
     if (isDisposed) {
 
         for (deviceId in deviceIdArray) {
+            if (deviceId == emptyPolarIDListString){
+                return //Maybe???
+            }
             setTimeStamp(deviceId, api)
             Log.d(TAG,deviceId)
             subscribeToPolarHR(deviceId, api, printLogCat)
