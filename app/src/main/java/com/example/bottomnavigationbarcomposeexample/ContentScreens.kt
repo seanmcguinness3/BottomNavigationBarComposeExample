@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import java.io.File
 import kotlin.concurrent.thread
 
 public const val emptyPolarIDListString = "No Connected ID's"
@@ -41,6 +42,7 @@ var firstConnectedDeviceFlag = true
 var deviceListForHomeScreen = mutableStateListOf<String>("No Connected Devices")
 var polarDeviceIdListForConnection = mutableStateListOf<String>(emptyPolarIDListString)
 lateinit var voMaster: BluetoothDevice
+var lapTimeFileExists = false
 
 @Composable
 fun HomeScreen() { //not going to pass this guy a view model because it doesn't contain any info anyway
@@ -71,6 +73,25 @@ fun HomeScreen() { //not going to pass this guy a view model because it doesn't 
             items(items = deviceListForHomeScreen) { name: String ->
                 ListConnectedDevice(name = name)
             }
+        }
+        //LAP BUTTON
+        Button(modifier = Modifier
+            .padding(horizontal = 20.dp, vertical = 20.dp)
+            .fillMaxWidth(1.0f),
+            colors = ButtonDefaults.buttonColors(
+                backgroundColor = colorResource(id = R.color.colorText),
+                contentColor = colorResource(id = R.color.colorPrimaryDark)
+            ),
+            onClick = {
+                if (!lapTimeFileExists) {
+                    generateNewFile("Lap Times.txt")
+                    lapTimeFileExists = true
+                }
+                val file = File("${getSaveFolder().absolutePath}/Lap Times.txt")
+                val timeStamp = System.currentTimeMillis()
+                file.appendText("Lap Time: $timeStamp \n")
+            }) {
+            Text("Lap Time Stamp")
         }
     }
 }

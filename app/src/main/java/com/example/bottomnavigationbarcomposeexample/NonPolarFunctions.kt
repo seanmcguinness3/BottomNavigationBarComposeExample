@@ -97,11 +97,6 @@ private val gattCallback = object :BluetoothGattCallback(){
             notifyIterator++
         }
 
-/*        if (notifyIterator == 1){
-            Log.d("DD", "connecting to 1527")
-            val service = gatt!!.getService(UUID.fromString(VO2_SERVICE_UUID))
-            subscribeToNotifications(service.getCharacteristic(UUID.fromString(CHAR_FOR_NOTIFY_UUID_1527)),gatt)
-        }*/
     }
 
     override fun onCharacteristicChanged(
