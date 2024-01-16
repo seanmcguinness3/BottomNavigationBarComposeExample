@@ -42,8 +42,8 @@ lateinit var voMaster: BluetoothDevice
 
 @Composable
 fun HomeScreen() { //not going to pass this guy a view model because it doesn't contain any info anyway
-    Log.d("DD","Home screen composable called")
-    var collectingData by remember { mutableStateOf(false)}
+    Log.d("DD", "Home screen composable called")
+    var collectingData by remember { mutableStateOf(false) }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -57,14 +57,16 @@ fun HomeScreen() { //not going to pass this guy a view model because it doesn't 
                 backgroundColor = colorResource(id = R.color.colorText),
                 contentColor = colorResource(id = R.color.colorPrimaryDark)
             ),
-            onClick = { subscribeToAllPolarData(deviceIdListForConnection.toList(),api,false)
-            subscribeToVOMaster(voMaster, context = context)
-            collectingData = !collectingData}) {
+            onClick = {
+                subscribeToAllPolarData(deviceIdListForConnection.toList(), api, false)
+                subscribeToVOMaster(voMaster, context = context)
+                collectingData = !collectingData
+            }) {
             Text(if (collectingData) "Stop Data Collection" else "Start Data Collection")
         }
         LazyColumn(modifier = Modifier.padding(vertical = 4.dp))
         {
-            items(items = deviceListForHomeScreen){name: String ->
+            items(items = deviceListForHomeScreen) { name: String ->
                 ListConnectedDevice(name = name)
             }
         }
@@ -76,13 +78,13 @@ fun ListConnectedDevice(name: String) {
     Surface(
         color = colorResource(id = R.color.colorPrimary),
         modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)
-    ){
+    ) {
         Column(
             modifier = Modifier
                 .padding(10.dp)
                 .fillMaxWidth()
-        ){
-            Row{
+        ) {
+            Row {
                 Column(modifier = Modifier.weight(1f))
                 {
                     Text(text = "Device", color = colorResource(id = R.color.colorText))
@@ -142,8 +144,8 @@ fun DevicesScreen(mainViewModel: MainActivity.DeviceViewModel = viewModel()) {
 
 @Composable
 fun ListItem(name: String, mainViewModel: MainActivity.DeviceViewModel = viewModel()) {
-    var changeButtonToConnected by remember { mutableStateOf(false)}
-    var connectToDeviceName by remember { mutableStateOf("none")}
+    var changeButtonToConnected by remember { mutableStateOf(false) }
+    var connectToDeviceName by remember { mutableStateOf("none") }
     Surface(
         color = colorResource(id = R.color.colorPrimary),
         modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)
@@ -171,18 +173,18 @@ fun ListItem(name: String, mainViewModel: MainActivity.DeviceViewModel = viewMod
                 OutlinedButton(modifier = Modifier
                     .padding(horizontal = 20.dp),
                     colors = ButtonDefaults.buttonColors(
-                    backgroundColor = colorResource(R.color.colorText),
-                    contentColor = colorResource(
-                        id = R.color.colorPrimaryDark
-                    )
-                ),
+                        backgroundColor = colorResource(R.color.colorText),
+                        contentColor = colorResource(
+                            id = R.color.colorPrimaryDark
+                        )
+                    ),
                     onClick = {
                         Log.d("DD", "Tapped on $name")
                         connectToDeviceName = name
                         changeButtonToConnected = !changeButtonToConnected
                         val deviceID = getPolarDeviceIDFromName(name)
                         api.connectToDevice(deviceID)
-                        if (firstConnectedDeviceFlag){
+                        if (firstConnectedDeviceFlag) {
                             mainViewModel.connectedDeviceList[0] = name
                             deviceListForHomeScreen[0] = name
                             deviceIdListForConnection[0] = getPolarDeviceIDFromName(name)
@@ -221,7 +223,7 @@ fun StartScan(startTime: Long, mainViewModel: MainActivity.DeviceViewModel = vie
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             super.onScanResult(callbackType, result)
             var notInList = true
-            for (deviceInListName in mainViewModel.deviceList){
+            for (deviceInListName in mainViewModel.deviceList) {
                 if (result.device.name == deviceInListName) notInList = false
             }
             if (result.device.name != null) {
@@ -240,7 +242,8 @@ fun StartScan(startTime: Long, mainViewModel: MainActivity.DeviceViewModel = vie
             val elapsedTime = System.currentTimeMillis() - startTime
 
             if ((elapsedTime) > 1000) {
-                mainViewModel.scanButtonText = mutableStateOf("Restart Scan") //This should update the button text but it's not, don't know why
+                mainViewModel.scanButtonText =
+                    mutableStateOf("Restart Scan") //This should update the button text but it's not, don't know why
                 //keep an eye out for a solution but moivng on for now
                 Log.d("DD", "Current scan button text = ${mainViewModel.scanButtonText.value}")
                 bleScanner.stopScan(this)
