@@ -143,6 +143,7 @@ fun HomeScreenPreview() {
 @Composable
 fun DevicesScreen(mainViewModel: MainActivity.DeviceViewModel = viewModel()) {
     var scanBLE by remember { mutableStateOf(false) }
+    var scanButtonText by remember { mutableStateOf("Start Scan") }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -157,10 +158,17 @@ fun DevicesScreen(mainViewModel: MainActivity.DeviceViewModel = viewModel()) {
                 contentColor = colorResource(id = R.color.colorPrimaryDark)
             ),
             onClick = {
-                mainViewModel.scanButtonText = mutableStateOf("Scanning...")
+                //mainViewModel.scanButtonText = mutableStateOf("Scanning...")
+                scanButtonText = "Scanning..."
                 scanBLE = true
             }) {
-            Text(text = mainViewModel.scanButtonText.value)
+            //Text(text = mainViewModel.scanButtonText.value)
+            Text(text = scanButtonText) }
+        LaunchedEffect(key1 = scanButtonText){
+            if(scanButtonText == "Scanning..."){
+                delay(1.seconds)
+                scanButtonText = "Restart Scan"
+            }
         }
         LazyColumn(modifier = Modifier.padding(vertical = 4.dp))
         {
@@ -179,8 +187,6 @@ fun DevicesScreen(mainViewModel: MainActivity.DeviceViewModel = viewModel()) {
 @Composable
 fun ListItem(name: String, mainViewModel: MainActivity.DeviceViewModel = viewModel()) {
     var buttonText by remember { mutableStateOf("Connect") }
-    var changeButtonToConnected by remember { mutableStateOf(false) } //remove this variable once tri-state setup is working
-    var connectToDeviceName by remember { mutableStateOf("none") }
     Surface(
         color = colorResource(id = R.color.colorPrimary),
         modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)
@@ -215,15 +221,21 @@ fun ListItem(name: String, mainViewModel: MainActivity.DeviceViewModel = viewMod
                     ),
                     onClick = {
                         Log.d("DD", "Tapped on $name")
-                        connectToDeviceName = name  //at some point try deleting this variable, idk what it's doing, something with remember
-                        changeButtonToConnected = !changeButtonToConnected  //this one gotta go to
                         buttonText = "Connecting"  //this is working, just have to delay the list addition using same logic as text changes
 
+
+                    }) { Text(buttonText) }
+                LaunchedEffect(key1 = buttonText){
+                    Log.d("","Launched effect running")
+                    if (buttonText == "Connecting"){
                         if (name.contains("Polar")){
                             val deviceID = getPolarDeviceIDFromName(name)
                             api.connectToDevice(deviceID)
-
+                        }
+                        delay(6.seconds)
+                        if (name.contains("Polar")){
                             if (firstConnectedDeviceFlag) {
+                                Log.d("","Trying to add device to home screen")
                                 deviceListForHomeScreen[0] = name
                                 polarDeviceIdListForConnection[0] = getPolarDeviceIDFromName(name)
                                 firstConnectedDeviceFlag = false
@@ -243,14 +255,9 @@ fun ListItem(name: String, mainViewModel: MainActivity.DeviceViewModel = viewMod
                                 deviceListForHomeScreen.add(name)
                             }
                         }
-                    }) {
-                    Text(//if (changeButtonToConnected) "Connected" else "Connect" // )
-                    buttonText)
-                }
-                LaunchedEffect(Unit){
-                    delay(5.seconds)
-                    buttonText = "Connected"
-                    Log.d("","Button text shoulda changed")
+                        buttonText = "Connected"
+                    }
+
                 }
             }
         }
@@ -300,12 +307,10 @@ fun StartScan(startTime: Long, mainViewModel: MainActivity.DeviceViewModel = vie
                 }
             }
             val elapsedTime = System.currentTimeMillis() - startTime
-
             if ((elapsedTime) > 1000) {
-                mainViewModel.scanButtonText =
-                    mutableStateOf("Restart Scan") //This should update the button text but it's not, don't know why
+               // mainViewModel.scanButtonText = mutableStateOf("Restart Scan") //This should update the button text but it's not, don't know why
                 //keep an eye out for a solution but moivng on for now
-                Log.d("DD", "Current scan button text = ${mainViewModel.scanButtonText.value}")
+                Log.d("DD", "Scan Stopped")
                 bleScanner.stopScan(this)
             }
         }
