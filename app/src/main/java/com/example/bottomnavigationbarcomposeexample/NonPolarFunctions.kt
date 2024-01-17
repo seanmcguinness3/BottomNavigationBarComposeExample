@@ -27,13 +27,10 @@ private val CHAR_ARRAY_FOR_NOTIFY_UUID = arrayOf(CHAR_FOR_NOTIFY_UUID_1526, CHAR
 private const val CCC_DESCRIPTOR_UUID = "00002902-0000-1000-8000-00805F9B34FB"
 
 private var notifyIterator = 1
-private var secondNotifyConnected = false
-private var thirdNotifyConnected = false
-
 
 @SuppressLint("MissingPermission")
 fun subscribeToVOMaster(device: BluetoothDevice, context: Context){
-    device.connectGatt(context,false,gattCallback, BluetoothDevice.TRANSPORT_LE)
+    device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
 }
 
 @SuppressLint("MissingPermission")

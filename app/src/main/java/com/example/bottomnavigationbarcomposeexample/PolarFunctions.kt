@@ -22,6 +22,8 @@ import java.util.EnumMap
 import java.util.UUID
 
 private const val TAG = "IDK"
+private var saveToLogFiles = false
+
 private var dcDisposable: Disposable? = null
 private var ecgDisposable: Disposable? = null
 private var accDisposable: Disposable? = null
@@ -39,15 +41,18 @@ private lateinit var gYRFileName: File
 private lateinit var mAGFileName: File
 private lateinit var pPGFileName: File
 
+fun saveToLogFiles(saveToFiles: Boolean){
+    saveToLogFiles = saveToFiles
+}
 fun subscribeToAllPolarData(deviceIdArray: List<String>, api: PolarBleApi, printLogCat: Boolean){
     val isDisposed = dcDisposable?.isDisposed ?: true
     if (isDisposed) {
 
         for (deviceId in deviceIdArray) {
             if (deviceId == emptyPolarIDListString){
-                return //Maybe???
+                return //If there's no polar devices, don't run any of this
             }
-            setTimeStamp(deviceId, api)
+            //setTimeStamp(deviceId, api)
             Log.d(TAG,deviceId)
             subscribeToPolarHR(deviceId, api, printLogCat)
             subscribeToPolarACC(deviceId, api, printLogCat)
@@ -92,8 +97,8 @@ private fun subscribeToPolarHR(deviceIDforFunc: String, api: PolarBleApi, printL
                         "$deviceIDforFunc  HR   bpm: ${sample.hr} rrs: ${sample.rrsMs} rrAvailable: ${sample.rrAvailable} contactStatus: ${sample.contactStatus} contactStatusSupported: ${sample.contactStatusSupported}"
                     if (printLogCat) {Log.d(TAG, logString)}
                     val fileString = "${System.currentTimeMillis()};${sample.hr}"
-                    val file = File("${getSaveFolder().absolutePath}/$deviceIDforFunc-HRData.txt \n")
-                    file.appendText(fileString)
+                    val file = File("${getSaveFolder().absolutePath}/$deviceIDforFunc-HRData.txt")
+                    if (saveToLogFiles) {file.appendText(fileString)}
                 }
             }, { error: Throwable ->
                 Log.e(TAG, "HR stream failed. Reason $error")
@@ -116,7 +121,7 @@ private fun subscribeToPolarACC(deviceIDforFunc: String, api: PolarBleApi, print
                 val logString = "$deviceIDforFunc ACC    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}"
                 val file = File("${getSaveFolder().absolutePath}/$deviceIDforFunc-ACCData.txt")
                 val fileString = "${System.currentTimeMillis()};${data.timeStamp};${data.x};${data.y};${data.z}; \n"
-                file.appendText(fileString)
+                if (saveToLogFiles) {file.appendText(fileString)}
                 if (printLogCat){Log.d(TAG, logString)}
             }
         }, { error: Throwable ->
@@ -141,7 +146,7 @@ private fun subscribeToPolarGYR(deviceIDforFunc: String, api: PolarBleApi, print
                     if (printLogCat){Log.d(TAG, logString)}
                     val fileString = "${System.currentTimeMillis()};${data.timeStamp};${data.x};${data.y};${data.z} \n"
                     val file = File("${getSaveFolder().absolutePath}/$deviceIDforFunc-GYRData.txt")
-                    file.appendText(fileString)
+                    if(saveToLogFiles){file.appendText(fileString)}
                 }
             }, { error: Throwable ->
                 Log.e(TAG, "GYR stream failed. Reason $error")
@@ -164,7 +169,7 @@ private fun subscribeToPolarMAG(deviceIDforFunc: String, api: PolarBleApi, print
                 if(printLogCat) {Log.d(TAG,logString)}
                 val fileString = "${System.currentTimeMillis()};${data.timeStamp};${data.x};${data.y};${data.z} \n"
                 val file = File("${getSaveFolder().absolutePath}/$deviceIDforFunc-MAGData.txt")
-                file.appendText(fileString)
+                if (saveToLogFiles) {file.appendText(fileString)}
             }
         }, { error: Throwable ->
             Log.e(TAG, "MAGNETOMETER stream failed. Reason $error")
@@ -191,7 +196,7 @@ private fun subscribeToPolarPPG(deviceIDforFunc: String, api: PolarBleApi, print
                     if(printLogCat) {Log.d(TAG, logString)}
                     val fileString = "${System.currentTimeMillis()};${data.timeStamp};${data.channelSamples[0]};${data.channelSamples[1]};${data.channelSamples[2]};${data.channelSamples[3]} \n"
                     val file = File("${getSaveFolder().absolutePath}/$deviceIDforFunc-PPGData.txt")
-                    file.appendText(fileString)
+                    if(saveToLogFiles) {file.appendText(fileString)}
                 }
             }
         }, { error: Throwable ->

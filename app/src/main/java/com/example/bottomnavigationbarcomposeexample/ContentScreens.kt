@@ -43,6 +43,7 @@ var deviceListForHomeScreen = mutableStateListOf<String>("No Connected Devices")
 var polarDeviceIdListForConnection = mutableStateListOf<String>(emptyPolarIDListString)
 lateinit var voMaster: BluetoothDevice
 var lapTimeFileExists = false
+var polarStreamsStarted = false
 
 @Composable
 fun HomeScreen() { //not going to pass this guy a view model because it doesn't contain any info anyway
@@ -62,9 +63,17 @@ fun HomeScreen() { //not going to pass this guy a view model because it doesn't 
                 contentColor = colorResource(id = R.color.colorPrimaryDark)
             ),
             onClick = {
-                subscribeToAllPolarData(polarDeviceIdListForConnection.toList(), api, false)
-                subscribeToVOMaster(voMaster, context = context)
                 collectingData = !collectingData
+                saveToLogFiles(collectingData) //only save to log files when collecting data
+
+                if (!polarStreamsStarted) {
+                    if (::voMaster.isInitialized) {
+                        subscribeToVOMaster(voMaster, context = context)
+                    }
+                    saveToLogFiles(true)
+                    subscribeToAllPolarData(polarDeviceIdListForConnection.toList(), api, false)
+                    polarStreamsStarted = true
+                }
             }) {
             Text(if (collectingData) "Stop Data Collection" else "Start Data Collection")
         }
