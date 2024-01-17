@@ -32,8 +32,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.delay
 import java.io.File
 import kotlin.concurrent.thread
+import kotlin.time.Duration.Companion.seconds
 
 public const val emptyPolarIDListString = "No Connected ID's"
 
@@ -176,7 +178,8 @@ fun DevicesScreen(mainViewModel: MainActivity.DeviceViewModel = viewModel()) {
 
 @Composable
 fun ListItem(name: String, mainViewModel: MainActivity.DeviceViewModel = viewModel()) {
-    var changeButtonToConnected by remember { mutableStateOf(false) }
+    var buttonText by remember { mutableStateOf("Connect") }
+    var changeButtonToConnected by remember { mutableStateOf(false) } //remove this variable once tri-state setup is working
     var connectToDeviceName by remember { mutableStateOf("none") }
     Surface(
         color = colorResource(id = R.color.colorPrimary),
@@ -213,18 +216,18 @@ fun ListItem(name: String, mainViewModel: MainActivity.DeviceViewModel = viewMod
                     onClick = {
                         Log.d("DD", "Tapped on $name")
                         connectToDeviceName = name  //at some point try deleting this variable, idk what it's doing, something with remember
-                        changeButtonToConnected = !changeButtonToConnected
+                        changeButtonToConnected = !changeButtonToConnected  //this one gotta go to
+                        buttonText = "Connecting"  //this is working, just have to delay the list addition using same logic as text changes
 
                         if (name.contains("Polar")){
                             val deviceID = getPolarDeviceIDFromName(name)
                             api.connectToDevice(deviceID)
+
                             if (firstConnectedDeviceFlag) {
-                                mainViewModel.connectedDeviceList[0] = name //try deleting connectedDeviceList, it's not being used by anything
                                 deviceListForHomeScreen[0] = name
                                 polarDeviceIdListForConnection[0] = getPolarDeviceIDFromName(name)
                                 firstConnectedDeviceFlag = false
                             } else {
-                                mainViewModel.connectedDeviceList.add(name)
                                 deviceListForHomeScreen.add(name)
                                 polarDeviceIdListForConnection.add(getPolarDeviceIDFromName(name))
                             }
@@ -234,16 +237,20 @@ fun ListItem(name: String, mainViewModel: MainActivity.DeviceViewModel = viewMod
                             //name string back to BluetoothDevice in order for this to work
                             //for now voMaster is set during the scan callback
                             if(firstConnectedDeviceFlag){
-                                mainViewModel.connectedDeviceList[0] = name
                                 deviceListForHomeScreen[0] = name
                                 firstConnectedDeviceFlag = false
                             } else {
-                                mainViewModel.connectedDeviceList.add(name)
                                 deviceListForHomeScreen.add(name)
                             }
                         }
                     }) {
-                    Text(if (changeButtonToConnected) "Connected" else "Connect")
+                    Text(//if (changeButtonToConnected) "Connected" else "Connect" // )
+                    buttonText)
+                }
+                LaunchedEffect(Unit){
+                    delay(5.seconds)
+                    buttonText = "Connected"
+                    Log.d("","Button text shoulda changed")
                 }
             }
         }

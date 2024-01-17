@@ -99,7 +99,6 @@ class MainActivity : ComponentActivity() {
     class DeviceViewModel : ViewModel(){
         var deviceList = mutableStateListOf<String>("No Devices")
         var scanButtonText = mutableStateOf("Start Scan")
-        var connectedDeviceList = mutableStateListOf<String>("No Connected Devices")
     }
 
 }
