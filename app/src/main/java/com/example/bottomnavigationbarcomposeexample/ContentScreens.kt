@@ -12,6 +12,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.MaterialTheme
@@ -52,37 +54,43 @@ fun HomeScreen() { //not going to pass this guy a view model because it doesn't 
     Log.d("DD", "Home screen composable called")
     var collectingData by remember { mutableStateOf(false) }
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(colorResource(id = R.color.colorPrimaryDark))
-            .wrapContentSize(Alignment.TopCenter)
+        Modifier.fillMaxHeight(),
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Button(modifier = Modifier
-            .padding(horizontal = 20.dp, vertical = 20.dp)
-            .fillMaxWidth(1.0f),
-            colors = ButtonDefaults.buttonColors(
-                backgroundColor = colorResource(id = R.color.colorText),
-                contentColor = colorResource(id = R.color.colorPrimaryDark)
-            ),
-            onClick = {
-                collectingData = !collectingData
-                saveToLogFiles(collectingData) //only save to log files when collecting data
+        Column(
+            modifier = Modifier
+                //.verticalScroll(rememberScrollState()) Work on this when connecting hella devices
+                .weight(1f, false)
+                .background(colorResource(id = R.color.colorPrimaryDark))
+                .wrapContentSize(Alignment.TopCenter)
+        ) {
+            Button(modifier = Modifier
+                .padding(horizontal = 20.dp, vertical = 20.dp)
+                .fillMaxWidth(1.0f),
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = colorResource(id = R.color.colorText),
+                    contentColor = colorResource(id = R.color.colorPrimaryDark)
+                ),
+                onClick = {
+                    collectingData = !collectingData
+                    saveToLogFiles(collectingData) //only save to log files when collecting data
 
-                if (!polarStreamsStarted) {
-                    if (::voMaster.isInitialized) {
-                        subscribeToVOMaster(voMaster, context = context)
+                    if (!polarStreamsStarted) {
+                        if (::voMaster.isInitialized) {
+                            subscribeToVOMaster(voMaster, context = context)
+                        }
+                        saveToLogFiles(true)
+                        subscribeToAllPolarData(polarDeviceIdListForConnection.toList(), api, true)
+                        polarStreamsStarted = true
                     }
-                    saveToLogFiles(true)
-                    subscribeToAllPolarData(polarDeviceIdListForConnection.toList(), api, false)
-                    polarStreamsStarted = true
+                }) {
+                Text(if (collectingData) "Stop Data Collection" else "Start Data Collection")
+            }
+            LazyColumn(modifier = Modifier.padding(vertical = 4.dp))
+            {
+                items(items = deviceListForHomeScreen) { name: String ->
+                    ListConnectedDevice(name = name)
                 }
-            }) {
-            Text(if (collectingData) "Stop Data Collection" else "Start Data Collection")
-        }
-        LazyColumn(modifier = Modifier.padding(vertical = 4.dp))
-        {
-            items(items = deviceListForHomeScreen) { name: String ->
-                ListConnectedDevice(name = name)
             }
         }
         //LAP BUTTON
@@ -163,9 +171,10 @@ fun DevicesScreen(mainViewModel: MainActivity.DeviceViewModel = viewModel()) {
                 scanBLE = true
             }) {
             //Text(text = mainViewModel.scanButtonText.value)
-            Text(text = scanButtonText) }
-        LaunchedEffect(key1 = scanButtonText){
-            if(scanButtonText == "Scanning..."){
+            Text(text = scanButtonText)
+        }
+        LaunchedEffect(key1 = scanButtonText) {
+            if (scanButtonText == "Scanning...") {
                 delay(1.seconds)
                 scanButtonText = "Restart Scan"
             }
@@ -211,7 +220,7 @@ fun ListItem(name: String, mainViewModel: MainActivity.DeviceViewModel = viewMod
                     )
                 }
                 //SINGLE DEVICE CONNECT BUTTON
-                OutlinedButton(modifier = Modifier 
+                OutlinedButton(modifier = Modifier
                     .padding(horizontal = 20.dp),
                     colors = ButtonDefaults.buttonColors(
                         backgroundColor = colorResource(R.color.colorText),
@@ -221,21 +230,21 @@ fun ListItem(name: String, mainViewModel: MainActivity.DeviceViewModel = viewMod
                     ),
                     onClick = {
                         Log.d("DD", "Tapped on $name")
-                        buttonText = "Connecting"  //this is working, just have to delay the list addition using same logic as text changes
-
-
-                    }) { Text(buttonText) }
-                LaunchedEffect(key1 = buttonText){
-                    Log.d("","Launched effect running")
-                    if (buttonText == "Connecting"){
-                        if (name.contains("Polar")){
+                        buttonText = "Connecting..." // NEXT TIME U MESS WITH THIS DO A VARIABLE
+                    })
+                { Text(buttonText) }
+                LaunchedEffect(key1 = buttonText) {
+                    Log.d("", "Launched effect running")
+                    if (buttonText == "Connecting...") {
+                        Log.d("","Connecting to device in launchedEffect")
+                        if (name.contains("Polar")) {
                             val deviceID = getPolarDeviceIDFromName(name)
                             api.connectToDevice(deviceID)
                         }
                         delay(6.seconds)
-                        if (name.contains("Polar")){
+                        if (name.contains("Polar")) {
                             if (firstConnectedDeviceFlag) {
-                                Log.d("","Trying to add device to home screen")
+                                Log.d("", "Trying to add device to home screen")
                                 deviceListForHomeScreen[0] = name
                                 polarDeviceIdListForConnection[0] = getPolarDeviceIDFromName(name)
                                 firstConnectedDeviceFlag = false
@@ -248,7 +257,7 @@ fun ListItem(name: String, mainViewModel: MainActivity.DeviceViewModel = viewMod
                             //^^this would be the ideal structure, but need to figure out how to go from
                             //name string back to BluetoothDevice in order for this to work
                             //for now voMaster is set during the scan callback
-                            if(firstConnectedDeviceFlag){
+                            if (firstConnectedDeviceFlag) {
                                 deviceListForHomeScreen[0] = name
                                 firstConnectedDeviceFlag = false
                             } else {
@@ -300,7 +309,7 @@ fun StartScan(startTime: Long, mainViewModel: MainActivity.DeviceViewModel = vie
                     //ISSUE HERE: I'm directly setting this variable on the scan, for non polar device.
                     //This is because for polar devices, the api allows you to get the BluetoothDevice from the name
                     //I don't know how to do that for non polar devices, but If i figure that out i can get rid of this
-                    if (result.device.name.contains("VO2 Master")){
+                    if (result.device.name.contains("VO2 Master")) {
                         voMaster = result.device
                     }
                     Log.d("DD", "Device Found: ${result.device.name}")
@@ -308,7 +317,7 @@ fun StartScan(startTime: Long, mainViewModel: MainActivity.DeviceViewModel = vie
             }
             val elapsedTime = System.currentTimeMillis() - startTime
             if ((elapsedTime) > 1000) {
-               // mainViewModel.scanButtonText = mutableStateOf("Restart Scan") //This should update the button text but it's not, don't know why
+                // mainViewModel.scanButtonText = mutableStateOf("Restart Scan") //This should update the button text but it's not, don't know why
                 //keep an eye out for a solution but moivng on for now
                 Log.d("DD", "Scan Stopped")
                 bleScanner.stopScan(this)

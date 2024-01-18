@@ -52,7 +52,7 @@ fun subscribeToAllPolarData(deviceIdArray: List<String>, api: PolarBleApi, print
             if (deviceId == emptyPolarIDListString){
                 return //If there's no polar devices, don't run any of this
             }
-            //setTimeStamp(deviceId, api)
+            setTimeStamp(deviceId, api)
             Log.d(TAG,deviceId)
             subscribeToPolarHR(deviceId, api, printLogCat)
             subscribeToPolarACC(deviceId, api, printLogCat)
@@ -96,7 +96,7 @@ private fun subscribeToPolarHR(deviceIDforFunc: String, api: PolarBleApi, printL
                     val logString =
                         "$deviceIDforFunc  HR   bpm: ${sample.hr} rrs: ${sample.rrsMs} rrAvailable: ${sample.rrAvailable} contactStatus: ${sample.contactStatus} contactStatusSupported: ${sample.contactStatusSupported}"
                     if (printLogCat) {Log.d(TAG, logString)}
-                    val fileString = "${System.currentTimeMillis()};${sample.hr}"
+                    val fileString = "${System.currentTimeMillis()};${sample.hr} \n"
                     val file = File("${getSaveFolder().absolutePath}/$deviceIDforFunc-HRData.txt")
                     if (saveToLogFiles) {file.appendText(fileString)}
                 }
