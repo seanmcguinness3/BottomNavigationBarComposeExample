@@ -57,7 +57,7 @@ fun subscribeToAllPolarData(deviceIdArray: List<String>, api: PolarBleApi, print
             if (deviceId == emptyPolarIDListString) {
                 return //If there's no polar devices, don't run any of this
             }
-            setTimeStamp(deviceId, api)
+            //setTimeStamp(deviceId, api)
             Log.d(TAG, deviceId)
             //subscribeToPolarHR(deviceId, api, printLogCat)
             subscribeToPolarACC(deviceId, api, printLogCat)
@@ -85,7 +85,7 @@ fun subscribeToAllPolarData(deviceIdArray: List<String>, api: PolarBleApi, print
     }
 }
 
-private fun setTimeStamp(deviceIDforFunc: String, api: PolarBleApi) {
+fun setTimeStamp(deviceIDforFunc: String, api: PolarBleApi) {
     val rightNow = Calendar.getInstance()
     rightNow.time = Date()
     api.setLocalTime(deviceIDforFunc, rightNow)
