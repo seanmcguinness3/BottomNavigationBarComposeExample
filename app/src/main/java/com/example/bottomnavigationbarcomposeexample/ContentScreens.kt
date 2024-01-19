@@ -238,7 +238,9 @@ fun ListItem(name: String) {
                             val deviceID = getPolarDeviceIDFromName(name)
                             api.connectToDevice(deviceID)
                         }
-                        delay(6.seconds)
+                        delay(6.seconds)  //SEAN REFACTOR There's actually an override function (deviceConnected(polarDeviceInfo: PolarDeviceInfo) )
+                        //I think you could probably use it to add the device to the list, and change the text to connected. That way you don't need this delay in the
+                        //launched effect, and if you execute the below code in the override it might not matter what screen you're on.
                         if (name.contains("Polar")) {
                             if (firstConnectedDeviceFlag) {
                                 Log.d("", "Trying to add device to home screen")

@@ -1,9 +1,8 @@
 package com.example.bottomnavigationbarcomposeexample
 
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.os.Bundle
+import android.os.Looper
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,10 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -31,19 +27,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.core.app.ActivityCompat.requestPermissions
 import android.Manifest
 import android.annotation.SuppressLint
-import android.content.ContentProvider
-import android.location.Location
 import com.google.android.gms.location.LocationRequest
-import com.google.android.gms.location.LocationRequest.Builder
 import android.os.Build
-import android.os.PersistableBundle
-import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -78,11 +65,13 @@ class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.M)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        //START THE MAIN SCREEN
         setContent {
             MainScreen()
         }
 
-
+        //REQUEST PERMISSIONS
         requestPermissions(
             arrayOf(
                 Manifest.permission.BLUETOOTH_SCAN,
@@ -91,70 +80,8 @@ class MainActivity : ComponentActivity() {
                 Manifest.permission.ACCESS_FINE_LOCATION
             ), PERMISSION_REQUEST_CODE
         )
-/*        fusedLocationProviderClient.lastLocation.addOnCompleteListener(this) { task ->
-            val location: Location? = task.result
-            Log.d("", "Location found: Lat: ${location!!.latitude} Lon: ${location!!.longitude}")
-            if (!locationLogCreated) {
-                locationFile = generateNewFile("Location Data")
-                locationFile.appendText("Time Stamp; Latitude; Longitude \n")
-                locationLogCreated = true
-            }
-            val timeStamp = System.currentTimeMillis()
-            locationFile.appendText("$timeStamp; ${location.latitude}; ${location.longitude}")
-        }
-        */
 
-        @SuppressLint("MissingPermission")
-        class LocationManager(
-            context: Context,
-            private var timeInterval: Long,
-            private var minimalDistance: Float
-        ) : LocationCallback() {
-
-            private var request: LocationRequest
-            private var locationClient: FusedLocationProviderClient
-
-            init {
-                // getting the location client
-                locationClient = LocationServices.getFusedLocationProviderClient(context)
-                request = createRequest()
-            }
-
-            private fun createRequest(): LocationRequest =
-                // New builder
-                LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, timeInterval).apply {
-                    setMinUpdateDistanceMeters(minimalDistance)
-                    setGranularity(Granularity.GRANULARITY_PERMISSION_LEVEL)
-                    setWaitForAccurateLocation(true)
-                }.build()
-
-            fun changeRequest(timeInterval: Long, minimalDistance: Float) {
-                this.timeInterval = timeInterval
-                this.minimalDistance = minimalDistance
-                createRequest()
-                stopLocationTracking()
-                startLocationTracking()
-            }
-
-            fun startLocationTracking() =
-                locationClient.requestLocationUpdates(request, this, Looper.getMainLooper())
-
-
-            fun stopLocationTracking() {
-                locationClient.flushLocations()
-                locationClient.removeLocationUpdates(this)
-            }
-
-            override fun onLocationResult(location: LocationResult) {
-                // TODO: on location change - do something with new location
-            }
-
-            override fun onLocationAvailability(availability: LocationAvailability) {
-                // TODO: react on the availability change
-            }
-
-        }
-
+        //START THE POLAR API
         context = applicationContext
         api = getApi(applicationContext)
         api.setApiCallback(object : PolarBleApiCallback() {
@@ -188,22 +115,61 @@ class MainActivity : ComponentActivity() {
                 // //SEE IF WE NEED THIS
             }
         })
-    }
 
-    @RequiresApi(Build.VERSION_CODES.M)
-    fun checkBT() {
-        requestPermissions(
-            arrayOf(
-                Manifest.permission.BLUETOOTH_SCAN,
-                Manifest.permission.BLUETOOTH_CONNECT,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ), PERMISSION_REQUEST_CODE
-        )
+        //START THE LOCATION TRACKING
+        LocationManager(context, 10L, 1.0F).startLocationTracking()
     }
 
     class DeviceViewModel : ViewModel() {
         var deviceList = mutableStateListOf<String>("No Devices")
-        var scanButtonText = mutableStateOf("Start Scan")
+    }
+
+    @SuppressLint("MissingPermission")
+    class LocationManager(
+        context: Context,
+        private var timeInterval: Long,
+        private var minimalDistance: Float
+    ) : LocationCallback() {
+
+        private var request: LocationRequest
+        private var locationClient: FusedLocationProviderClient
+        private lateinit var locationFile: File
+
+        init {
+            // getting the location client
+            locationFile =  generateNewFile("LocationData.txt")
+            locationFile.appendText("TimeStamp; Latitude; Longitude")
+            locationClient = LocationServices.getFusedLocationProviderClient(context)
+            request = createRequest()
+        }
+
+        private fun createRequest(): LocationRequest =
+            // New builder
+            LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, timeInterval).apply {
+                setMinUpdateDistanceMeters(minimalDistance)
+                setGranularity(Granularity.GRANULARITY_PERMISSION_LEVEL)
+                setWaitForAccurateLocation(true)
+            }.build()
+
+        fun startLocationTracking() =
+            locationClient.requestLocationUpdates(request, this, Looper.getMainLooper())
+
+        fun stopLocationTracking() {
+            locationClient.flushLocations()
+            locationClient.removeLocationUpdates(this)
+        }
+
+        override fun onLocationResult(location: LocationResult) {
+            Log.d("","Location update latitude: ${location.lastLocation!!.latitude}")
+            Log.d("","Location update longitude: ${location.lastLocation!!.longitude}")
+            val timeStamp = System.currentTimeMillis()
+            locationFile.appendText("$timeStamp; ${location.lastLocation!!.latitude}; ${location.lastLocation!!.longitude}")
+        }
+
+        override fun onLocationAvailability(availability: LocationAvailability) {
+            Log.d("","Location Availible")
+        }
+
     }
 
 }
