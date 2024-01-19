@@ -47,10 +47,10 @@ var deviceListForHomeScreen = mutableStateListOf<String>("No Connected Devices")
 var polarDeviceIdListForConnection = mutableStateListOf<String>(emptyPolarIDListString)
 lateinit var voMaster: BluetoothDevice
 var lapTimeFileExists = false
-var polarStreamsStarted = false
+var bleStreamsStarted = false
 
 @Composable
-fun HomeScreen() { //not going to pass this guy a view model because it doesn't contain any info anyway
+fun HomeScreen() {
     Log.d("DD", "Home screen composable called")
     var collectingData by remember { mutableStateOf(false) }
     Column(
@@ -59,7 +59,6 @@ fun HomeScreen() { //not going to pass this guy a view model because it doesn't 
     ) {
         Column(
             modifier = Modifier
-                //.verticalScroll(rememberScrollState()) Work on this when connecting hella devices
                 .weight(1f, false)
                 .background(colorResource(id = R.color.colorPrimaryDark))
                 .wrapContentSize(Alignment.TopCenter)
@@ -75,13 +74,13 @@ fun HomeScreen() { //not going to pass this guy a view model because it doesn't 
                     collectingData = !collectingData
                     saveToLogFiles(collectingData) //only save to log files when collecting data
 
-                    if (!polarStreamsStarted) {
+                    if (!bleStreamsStarted) {
                         if (::voMaster.isInitialized) {
                             subscribeToVOMaster(voMaster, context = context)
                         }
                         saveToLogFiles(true)
                         subscribeToAllPolarData(polarDeviceIdListForConnection.toList(), api, true)
-                        polarStreamsStarted = true
+                        bleStreamsStarted = true
                     }
                 }) {
                 Text(if (collectingData) "Stop Data Collection" else "Start Data Collection")
@@ -166,11 +165,9 @@ fun DevicesScreen(mainViewModel: MainActivity.DeviceViewModel = viewModel()) {
                 contentColor = colorResource(id = R.color.colorPrimaryDark)
             ),
             onClick = {
-                //mainViewModel.scanButtonText = mutableStateOf("Scanning...")
                 scanButtonText = "Scanning..."
                 scanBLE = true
             }) {
-            //Text(text = mainViewModel.scanButtonText.value)
             Text(text = scanButtonText)
         }
         LaunchedEffect(key1 = scanButtonText) {
@@ -194,7 +191,7 @@ fun DevicesScreen(mainViewModel: MainActivity.DeviceViewModel = viewModel()) {
 }
 
 @Composable
-fun ListItem(name: String, mainViewModel: MainActivity.DeviceViewModel = viewModel()) {
+fun ListItem(name: String) {
     var buttonText by remember { mutableStateOf("Connect") }
     Surface(
         color = colorResource(id = R.color.colorPrimary),

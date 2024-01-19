@@ -36,53 +36,106 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.core.app.ActivityCompat.requestPermissions
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.ContentProvider
+import android.location.Location
+import android.location.LocationRequest
 import android.os.Build
 import android.os.PersistableBundle
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.lifecycle.ViewModel
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import com.polar.sdk.api.PolarBleApi
 import com.polar.sdk.api.PolarBleApiCallback
 import com.polar.sdk.api.PolarBleApiDefaultImpl
 import com.polar.sdk.api.model.PolarDeviceInfo
 import com.polar.sdk.api.model.PolarHrData
+import java.io.File
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 private const val PERMISSION_REQUEST_CODE = 1
 lateinit var api: PolarBleApi
 lateinit var context: Context
+lateinit var locationFile: File
+var locationLogCreated = false
+
 class MainActivity : ComponentActivity() {
 
+    private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
+    private lateinit var locationRequest: LocationRequest
+    private lateinit var locationCallback: LocationCallback
+
+    @SuppressLint("MissingPermission")
     @RequiresApi(Build.VERSION_CODES.M)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MainScreen()
         }
-        checkBT()
+
+        val timeInterval = TimeUnit.SECONDS.toMillis(60)
+        locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY,timeInterval).apply{
+            setMinUpdateDistanceMeters()
+        }
+
+
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
+        requestPermissions(
+            arrayOf(
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ), PERMISSION_REQUEST_CODE
+        )
+        fusedLocationProviderClient.lastLocation.addOnCompleteListener(this) { task ->
+            val location: Location? = task.result
+            Log.d("", "Location found: Lat: ${location!!.latitude} Lon: ${location!!.longitude}")
+            if (!locationLogCreated) {
+                locationFile = generateNewFile("Location Data")
+                locationFile.appendText("Time Stamp; Latitude; Longitude \n")
+                locationLogCreated = true
+            }
+            val timeStamp = System.currentTimeMillis()
+            locationFile.appendText("$timeStamp; ${location.latitude}; ${location.longitude}")
+        }
+
+        locationReq
+
         context = applicationContext
         api = getApi(applicationContext)
         api.setApiCallback(object : PolarBleApiCallback() {
             override fun blePowerStateChanged(powered: Boolean) {
                 //SEE IF WE NEED THIS
             }
+
             override fun deviceConnected(polarDeviceInfo: PolarDeviceInfo) {
                 //SEE IF WE NEED THIS
             }
+
             override fun deviceConnecting(polarDeviceInfo: PolarDeviceInfo) {
                 //SEE IF WE NEED THIS
             }
+
             override fun deviceDisconnected(polarDeviceInfo: PolarDeviceInfo) {
                 //SEE IF WE NEED THIS
             }
+
             override fun disInformationReceived(identifier: String, uuid: UUID, value: String) {
                 //SEE IF WE NEED THIS
             }
+
             override fun batteryLevelReceived(identifier: String, level: Int) {
                 //SEE IF WE NEED THIS
             }
+
             override fun hrNotificationReceived(
                 identifier: String, data: PolarHrData.PolarHrSample
             ) {
@@ -92,11 +145,17 @@ class MainActivity : ComponentActivity() {
     }
 
     @RequiresApi(Build.VERSION_CODES.M)
-    fun checkBT(){
-        requestPermissions(arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.ACCESS_FINE_LOCATION), PERMISSION_REQUEST_CODE)
+    fun checkBT() {
+        requestPermissions(
+            arrayOf(
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ), PERMISSION_REQUEST_CODE
+        )
     }
 
-    class DeviceViewModel : ViewModel(){
+    class DeviceViewModel : ViewModel() {
         var deviceList = mutableStateListOf<String>("No Devices")
         var scanButtonText = mutableStateOf("Start Scan")
     }
@@ -104,8 +163,8 @@ class MainActivity : ComponentActivity() {
 }
 
 
-fun getApi(context: Context) : PolarBleApi{
-    val api: PolarBleApi by lazy{
+fun getApi(context: Context): PolarBleApi {
+    val api: PolarBleApi by lazy {
         PolarBleApiDefaultImpl.defaultImplementation(
             context, setOf(
                 PolarBleApi.PolarBleSdkFeature.FEATURE_HR,
