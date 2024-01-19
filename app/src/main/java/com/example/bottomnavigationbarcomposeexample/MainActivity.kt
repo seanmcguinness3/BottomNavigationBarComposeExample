@@ -175,7 +175,7 @@ fun getApi(context: Context): PolarBleApi {
                 PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING,
                 PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_DEVICE_TIME_SETUP,
                 PolarBleApi.PolarBleSdkFeature.FEATURE_DEVICE_INFO,
-                PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_LED_ANIMATION
+                PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_LED_ANIMATION,
             )
         )
     }
