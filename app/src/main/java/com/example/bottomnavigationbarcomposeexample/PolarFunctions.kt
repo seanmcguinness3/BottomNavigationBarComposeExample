@@ -86,6 +86,7 @@ private fun setTimeStamp(deviceIDforFunc: String, api: PolarBleApi){
     api.setLocalTime(deviceIDforFunc,rightNow)
         .observeOn(Schedulers.io())
         .subscribe()
+Log.d("","Trying to set time stamp")
 }
 
 private fun subscribeToPolarHR(deviceIDforFunc: String, api: PolarBleApi, printLogCat: Boolean) {
@@ -114,7 +115,6 @@ private fun subscribeToPolarACC(deviceIDforFunc: String, api: PolarBleApi, print
     accSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 3
     val accSettings = PolarSensorSetting(accSettingsMap)
     accDisposable = api.startAccStreaming(deviceIDforFunc, accSettings)
-        //.observeOn(AndroidSchedulers.mainThread())
         .observeOn(Schedulers.io())
         .subscribe({ accData: PolarAccelerometerData ->
             for (data in accData.samples) {
@@ -138,8 +138,7 @@ private fun subscribeToPolarGYR(deviceIDforFunc: String, api: PolarBleApi, print
     gyrSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 3
     val gyrSettings = PolarSensorSetting(gyrSettingsMap)
     gyrDisposable =
-        //SEAN WHEN YOU START WORKING ON THIS READ THE BELOW
-        api.startGyroStreaming(deviceIDforFunc, gyrSettings).observeOn(Schedulers.io()) //I think changing this from .mainthread to .io, for the most part, fixed the UI sensitivity issue. Change the rest. There's still a fuckton of bugs.
+        api.startGyroStreaming(deviceIDforFunc, gyrSettings).observeOn(Schedulers.io())
             .subscribe({ gyrData: PolarGyroData ->
                 for (data in gyrData.samples) {
                     val logString = "$deviceIDforFunc GYR    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}"
@@ -177,6 +176,7 @@ private fun subscribeToPolarMAG(deviceIDforFunc: String, api: PolarBleApi, print
 }
 
 private fun subscribeToPolarPPG(deviceIDforFunc: String, api: PolarBleApi, printLogCat: Boolean) {
+
     val ppgSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
         EnumMap(PolarSensorSetting.SettingType::class.java)
     ppgSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] = 135 //sensors appear to have different sample rates for ppg.

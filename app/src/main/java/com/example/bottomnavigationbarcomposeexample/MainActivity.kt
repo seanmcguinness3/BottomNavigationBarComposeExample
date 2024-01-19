@@ -6,12 +6,8 @@ import android.os.Looper
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -47,19 +43,12 @@ import com.polar.sdk.api.model.PolarDeviceInfo
 import com.polar.sdk.api.model.PolarHrData
 import java.io.File
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 
 private const val PERMISSION_REQUEST_CODE = 1
 lateinit var api: PolarBleApi
 lateinit var context: Context
-lateinit var locationFile: File
-var locationLogCreated = false
 
 class MainActivity : ComponentActivity() {
-
-    private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
-    private lateinit var locationRequest: LocationRequest
-    private lateinit var locationCallback: LocationCallback
 
     @SuppressLint("MissingPermission")
     @RequiresApi(Build.VERSION_CODES.M)
@@ -133,11 +122,10 @@ class MainActivity : ComponentActivity() {
 
         private var request: LocationRequest
         private var locationClient: FusedLocationProviderClient
-        private lateinit var locationFile: File
+        private var locationFile: File = generateNewFile("LocationData.txt")
 
         init {
             // getting the location client
-            locationFile =  generateNewFile("LocationData.txt")
             locationFile.appendText("TimeStamp; Latitude; Longitude")
             locationClient = LocationServices.getFusedLocationProviderClient(context)
             request = createRequest()
