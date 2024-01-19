@@ -79,7 +79,7 @@ fun HomeScreen() {
                             subscribeToVOMaster(voMaster, context = context)
                         }
                         saveToLogFiles(true)
-                        subscribeToAllPolarData(polarDeviceIdListForConnection.toList(), api, true)
+                        subscribeToAllPolarData(polarDeviceIdListForConnection.toList(), api, false)
                         bleStreamsStarted = true
                     }
                 }) {

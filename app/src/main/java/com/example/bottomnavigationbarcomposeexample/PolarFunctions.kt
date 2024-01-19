@@ -96,7 +96,7 @@ private fun subscribeToPolarHR(deviceIDforFunc: String, api: PolarBleApi, printL
                 for (sample in hrData.samples) {
                     val logString =
                         "$deviceIDforFunc  HR   bpm: ${sample.hr} rrs: ${sample.rrsMs} rrAvailable: ${sample.rrAvailable} contactStatus: ${sample.contactStatus} contactStatusSupported: ${sample.contactStatusSupported}"
-                    if (printLogCat) {Log.d(TAG, logString)}
+                    Log.d(TAG, logString) //printing no matter what
                     val fileString = "${System.currentTimeMillis()};${sample.hr} \n"
                     val file = File("${getSaveFolder().absolutePath}/$deviceIDforFunc-HRData.txt")
                     if (saveToLogFiles) {file.appendText(fileString)}
@@ -176,6 +176,9 @@ private fun subscribeToPolarMAG(deviceIDforFunc: String, api: PolarBleApi, print
 }
 
 private fun subscribeToPolarPPG(deviceIDforFunc: String, api: PolarBleApi, printLogCat: Boolean) {
+
+    val ppgSampleRate = api.requestStreamSettings(deviceIDforFunc,PolarBleApi.PolarDeviceDataType.PPG)
+    Log.d("","PPG setting found = $ppgSampleRate")
 
     val ppgSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
         EnumMap(PolarSensorSetting.SettingType::class.java)
