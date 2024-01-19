@@ -39,16 +39,18 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ContentProvider
 import android.location.Location
-import android.location.LocationRequest
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationRequest.Builder
 import android.os.Build
 import android.os.PersistableBundle
 import android.widget.Toast
 import androidx.annotation.RequiresApi
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.lifecycle.ViewModel
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.Granularity
+import com.google.android.gms.location.LocationAvailability
 import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.polar.sdk.api.PolarBleApi
@@ -80,13 +82,7 @@ class MainActivity : ComponentActivity() {
             MainScreen()
         }
 
-        val timeInterval = TimeUnit.SECONDS.toMillis(60)
-        locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY,timeInterval).apply{
-            setMinUpdateDistanceMeters()
-        }
 
-
-        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
         requestPermissions(
             arrayOf(
                 Manifest.permission.BLUETOOTH_SCAN,
@@ -95,7 +91,7 @@ class MainActivity : ComponentActivity() {
                 Manifest.permission.ACCESS_FINE_LOCATION
             ), PERMISSION_REQUEST_CODE
         )
-        fusedLocationProviderClient.lastLocation.addOnCompleteListener(this) { task ->
+/*        fusedLocationProviderClient.lastLocation.addOnCompleteListener(this) { task ->
             val location: Location? = task.result
             Log.d("", "Location found: Lat: ${location!!.latitude} Lon: ${location!!.longitude}")
             if (!locationLogCreated) {
@@ -106,8 +102,58 @@ class MainActivity : ComponentActivity() {
             val timeStamp = System.currentTimeMillis()
             locationFile.appendText("$timeStamp; ${location.latitude}; ${location.longitude}")
         }
+        */
 
-        locationReq
+        @SuppressLint("MissingPermission")
+        class LocationManager(
+            context: Context,
+            private var timeInterval: Long,
+            private var minimalDistance: Float
+        ) : LocationCallback() {
+
+            private var request: LocationRequest
+            private var locationClient: FusedLocationProviderClient
+
+            init {
+                // getting the location client
+                locationClient = LocationServices.getFusedLocationProviderClient(context)
+                request = createRequest()
+            }
+
+            private fun createRequest(): LocationRequest =
+                // New builder
+                LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, timeInterval).apply {
+                    setMinUpdateDistanceMeters(minimalDistance)
+                    setGranularity(Granularity.GRANULARITY_PERMISSION_LEVEL)
+                    setWaitForAccurateLocation(true)
+                }.build()
+
+            fun changeRequest(timeInterval: Long, minimalDistance: Float) {
+                this.timeInterval = timeInterval
+                this.minimalDistance = minimalDistance
+                createRequest()
+                stopLocationTracking()
+                startLocationTracking()
+            }
+
+            fun startLocationTracking() =
+                locationClient.requestLocationUpdates(request, this, Looper.getMainLooper())
+
+
+            fun stopLocationTracking() {
+                locationClient.flushLocations()
+                locationClient.removeLocationUpdates(this)
+            }
+
+            override fun onLocationResult(location: LocationResult) {
+                // TODO: on location change - do something with new location
+            }
+
+            override fun onLocationAvailability(availability: LocationAvailability) {
+                // TODO: react on the availability change
+            }
+
+        }
 
         context = applicationContext
         api = getApi(applicationContext)
