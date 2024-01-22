@@ -60,14 +60,13 @@ fun saveToLogFiles(saveToFiles: Boolean) {
 fun subscribeToAllPolarData(deviceIdArray: List<String>, api: PolarBleApi, printLogCat: Boolean) {
     val isDisposed = dcDisposable?.isDisposed ?: true
     if (isDisposed) {
-        var deviceIndex = 0
         for (deviceId in deviceIdArray) {
+            Log.d(TAG, "Subscribe to polar device $deviceId called")
             if (deviceId == emptyPolarIDListString) {
                 return //If there's no polar devices, don't run any of this
             }
             var timeStampInfo = FirstTimeStamps(deviceId)
             firstTimeStamps.add(timeStampInfo)
-            Log.d(TAG, deviceId)
             subscribeToPolarHR(deviceId, api, printLogCat)
             subscribeToPolarACC(deviceId, api, printLogCat)
             subscribeToPolarGYR(deviceId, api, printLogCat)

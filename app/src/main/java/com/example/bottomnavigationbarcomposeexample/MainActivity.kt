@@ -126,7 +126,7 @@ class MainActivity : ComponentActivity() {
 
         init {
             // getting the location client
-            locationFile.appendText("TimeStamp; Latitude; Longitude")
+            locationFile.appendText("TimeStamp; Latitude; Longitude \n")
             locationClient = LocationServices.getFusedLocationProviderClient(context)
             request = createRequest()
         }
@@ -150,8 +150,9 @@ class MainActivity : ComponentActivity() {
         override fun onLocationResult(location: LocationResult) {
             Log.d("","Location update latitude: ${location.lastLocation!!.latitude}")
             Log.d("","Location update longitude: ${location.lastLocation!!.longitude}")
-            val timeStamp = System.currentTimeMillis()
-            locationFile.appendText("$timeStamp; ${location.lastLocation!!.latitude}; ${location.lastLocation!!.longitude}")
+            //val timeStamp = System.currentTimeMillis() - firstTimeStamps[0].phoneTimeStamp
+            val timeStamp = System.currentTimeMillis()//Need to fix this, this variable is blank before the polar starts logging. Not sure what to do yet.
+            locationFile.appendText("$timeStamp; ${location.lastLocation!!.latitude}; ${location.lastLocation!!.longitude} \n")
         }
 
         override fun onLocationAvailability(availability: LocationAvailability) {

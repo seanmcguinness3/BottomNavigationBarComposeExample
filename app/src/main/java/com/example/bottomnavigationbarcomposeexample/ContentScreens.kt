@@ -106,7 +106,7 @@ fun HomeScreen() {
                     lapTimeFileExists = true
                 }
                 val file = File("${getSaveFolder().absolutePath}/Lap Times.txt")
-                val timeStamp = System.currentTimeMillis()
+                val timeStamp = System.currentTimeMillis() - firstTimeStamps[0].phoneTimeStamp
                 file.appendText("Lap Time: $timeStamp \n")
             }) {
             Text("Lap Time Stamp")
@@ -173,7 +173,7 @@ fun DevicesScreen(mainViewModel: MainActivity.DeviceViewModel = viewModel()) {
         }
         LaunchedEffect(key1 = scanButtonText) {
             if (scanButtonText == "Scanning...") {
-                delay(1.seconds)
+                delay(5.seconds)
                 scanButtonText = "Restart Scan"
             }
         }
@@ -316,9 +316,7 @@ fun StartScan(startTime: Long, mainViewModel: MainActivity.DeviceViewModel = vie
                 }
             }
             val elapsedTime = System.currentTimeMillis() - startTime
-            if ((elapsedTime) > 1000) {
-                // mainViewModel.scanButtonText = mutableStateOf("Restart Scan") //This should update the button text but it's not, don't know why
-                //keep an eye out for a solution but moivng on for now
+            if ((elapsedTime) > 5000) {
                 Log.d("DD", "Scan Stopped")
                 bleScanner.stopScan(this)
             }
