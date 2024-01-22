@@ -57,12 +57,12 @@ fun subscribeToAllPolarData(deviceIdArray: List<String>, api: PolarBleApi, print
             if (deviceId == emptyPolarIDListString) {
                 return //If there's no polar devices, don't run any of this
             }
-            //setTimeStamp(deviceId, api)
+            //setTimeStamp(deviceId, api) can't get this to work for some reason
             Log.d(TAG, deviceId)
             //subscribeToPolarHR(deviceId, api, printLogCat)
             subscribeToPolarACC(deviceId, api, printLogCat)
-            //subscribeToPolarGYR(deviceId, api, printLogCat)
-            //subscribeToPolarMAG(deviceId, api, printLogCat)
+            subscribeToPolarGYR(deviceId, api, printLogCat)
+            subscribeToPolarMAG(deviceId, api, printLogCat)
             //subscribeToPolarPPG(deviceId, api, printLogCat)
 
 
@@ -119,7 +119,7 @@ private fun subscribeToPolarHR(deviceIDforFunc: String, api: PolarBleApi, printL
             }, { Log.d(TAG, "HR stream complete") })
 }
 
-private fun subscribeToPolarACC(deviceIDforFunc: String, api: PolarBleApi, printLogCat: Boolean) {
+private fun subscribeToPolarACC(deviceIDforFunc: String, api: PolarBleApi, printLogCat: Boolean): LongArray {
     val accSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
         EnumMap(PolarSensorSetting.SettingType::class.java)
     accSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] = 52
@@ -127,15 +127,21 @@ private fun subscribeToPolarACC(deviceIDforFunc: String, api: PolarBleApi, print
     accSettingsMap[PolarSensorSetting.SettingType.RANGE] = 8
     accSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 3
     val accSettings = PolarSensorSetting(accSettingsMap)
+    var firstTimeStamps = longArrayOf(-1L, -1L)
+    var firstSensorTimeStamp = -1L
+    val firstPhoneTimeStamp = System.currentTimeMillis()
     accDisposable = api.startAccStreaming(deviceIDforFunc, accSettings)
         .observeOn(Schedulers.io())
         .subscribe({ accData: PolarAccelerometerData ->
             for (data in accData.samples) {
+                if (firstTimeStamps[0] == -1L){
+                    firstTimeStamps[0] = data.timeStamp //this doesn't run until after the return is called, so don't get updated
+                }
                 val logString =
-                    "$deviceIDforFunc ACC    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}"
+                    "$deviceIDforFunc ACC    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp - firstSensorTimeStamp}"
                 val file = File("${getSaveFolder().absolutePath}/$deviceIDforFunc-ACCData.txt")
                 val fileString =
-                    "${System.currentTimeMillis()};${data.timeStamp};${data.x};${data.y};${data.z}; \n"
+                    "${System.currentTimeMillis()};${data.timeStamp - firstSensorTimeStamp};${data.x};${data.y};${data.z}; \n"
                 if (saveToLogFiles) {
                     file.appendText(fileString)
                 }
@@ -146,6 +152,8 @@ private fun subscribeToPolarACC(deviceIDforFunc: String, api: PolarBleApi, print
         }, { error: Throwable ->
             Log.e(TAG, "Acc stream failed because $error")
         }, { Log.d(TAG, "acc stream complete") })
+    Log.d("","returned ${firstTimeStamps[0]} as the sensor time stamp")
+    return firstTimeStamps
 }
 
 private fun subscribeToPolarGYR(deviceIDforFunc: String, api: PolarBleApi, printLogCat: Boolean) {

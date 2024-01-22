@@ -79,7 +79,7 @@ fun HomeScreen() {
                             subscribeToVOMaster(voMaster, context = context)
                         }
                         saveToLogFiles(true)
-                        subscribeToAllPolarData(polarDeviceIdListForConnection.toList(), api, false)
+                        subscribeToAllPolarData(polarDeviceIdListForConnection.toList(), api, true)
                         bleStreamsStarted = true
                     }
                 }) {
@@ -239,7 +239,7 @@ fun ListItem(name: String) {
                         if (name.contains("Polar")) {
                             api.connectToDevice(deviceID)
                         }
-                        delay(6.seconds)  //SEAN REFACTOR There's actually an override function (deviceConnected(polarDeviceInfo: PolarDeviceInfo) )
+                        delay(10.seconds)  //SEAN REFACTOR There's actually an override function (deviceConnected(polarDeviceInfo: PolarDeviceInfo) )
                         //I think you could probably use it to add the device to the list, and change the text to connected. That way you don't need this delay in the
                         //launched effect, and if you execute the below code in the override it might not matter what screen you're on.
                         setTimeStamp(deviceID, api)
