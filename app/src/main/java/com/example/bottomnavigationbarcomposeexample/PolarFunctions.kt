@@ -13,6 +13,7 @@ import com.polar.sdk.api.PolarBleApiCallback
 import com.polar.sdk.api.PolarBleApiDefaultImpl
 import com.polar.sdk.api.model.PolarAccelerometerData
 import com.polar.sdk.api.model.PolarDeviceInfo
+import com.polar.sdk.api.model.PolarEcgData
 import com.polar.sdk.api.model.PolarGyroData
 import com.polar.sdk.api.model.PolarHrData
 import com.polar.sdk.api.model.PolarMagnetometerData
@@ -49,6 +50,7 @@ private lateinit var aCCFileName: File
 private lateinit var gYRFileName: File
 private lateinit var mAGFileName: File
 private lateinit var pPGFileName: File
+private lateinit var eCGFileName: File
 var firstTimeStamps: MutableList<FirstTimeStamps> = ArrayList()
 
 fun saveToLogFiles(saveToFiles: Boolean) {
@@ -71,19 +73,21 @@ fun subscribeToAllPolarData(deviceIdArray: List<String>, api: PolarBleApi, print
             subscribeToPolarGYR(deviceId, api, printLogCat)
             subscribeToPolarMAG(deviceId, api, printLogCat)
             subscribeToPolarPPG(deviceId, api, printLogCat)
-
+            subscribeToPolarECG(deviceId, api, printLogCat)
 
             hRFileName = generateNewFile("$deviceId-HRData.txt")
             aCCFileName = generateNewFile("$deviceId-ACCData.txt")
             gYRFileName = generateNewFile("$deviceId-GYRData.txt")
             mAGFileName = generateNewFile("$deviceId-MAGData.txt")
             pPGFileName = generateNewFile("$deviceId-PPGData.txt")
+            eCGFileName = generateNewFile("$deviceId-ECGData.txt")
 
             hRFileName.appendText("Phone timestamp;HR [bpm] \n")
             aCCFileName.appendText("Phone timestamp;sensor timestamp [ns];X [mg];Y [mg];Z [mg] \n")
             gYRFileName.appendText("Phone timestamp;sensor timestamp [ns];X [dps];Y [dps];Z [dps] \n")
             mAGFileName.appendText("Phone timestamp;sensor timestamp [ns];X [G];Y [G];Z [G] \n")
             pPGFileName.appendText("Phone timestamp;sensor timestamp [ns];channel 0;channel 1;channel 2;ambient \n")
+            eCGFileName.appendText("Phone timestamp;sensor timestamp [ns];voltage \n")
 
         }
 
@@ -101,18 +105,16 @@ private fun subscribeToPolarHR(deviceIDforFunc: String, api: PolarBleApi, printL
             .subscribe({ hrData: PolarHrData ->
                 val deviceIdx = getDeviceIndexInTimestampArray(deviceIDforFunc)
                 for (sample in hrData.samples) {
-                    if (firstTimeStamps[deviceIdx].sensorTimeStamp != 0L) {//stop any logging until the first time stamp gets set
-                        val adjustedPhoneTimeStamp =
-                            System.currentTimeMillis() - firstTimeStamps[deviceIdx].phoneTimeStamp
-                        val logString =
-                            "$deviceIDforFunc HR bpm: ${sample.hr} rrs: ${sample.rrsMs} rrAvailable: ${sample.rrAvailable} contactStatus: ${sample.contactStatus} contactStatusSupported: ${sample.contactStatusSupported}"
-                        Log.d(TAG, logString) //printing no matter what
-                        val fileString = "${adjustedPhoneTimeStamp};${sample.hr} \n"
-                        val file =
-                            File("${getSaveFolder().absolutePath}/$deviceIDforFunc-HRData.txt")
-                        if (saveToLogFiles) {
-                            file.appendText(fileString)
-                        }
+                    val adjustedPhoneTimeStamp =
+                        System.currentTimeMillis() - firstTimeStamps[deviceIdx].phoneTimeStamp
+                    val logString =
+                        "$deviceIDforFunc HR bpm: ${sample.hr} rrs: ${sample.rrsMs} rrAvailable: ${sample.rrAvailable} contactStatus: ${sample.contactStatus} contactStatusSupported: ${sample.contactStatusSupported}"
+                    Log.d(TAG, logString) //printing no matter what
+                    val fileString = "${adjustedPhoneTimeStamp};${sample.hr} \n"
+                    val file =
+                        File("${getSaveFolder().absolutePath}/$deviceIDforFunc-HRData.txt")
+                    if (saveToLogFiles) {
+                        file.appendText(fileString)
                     }
                 }
             }, { error: Throwable ->
@@ -141,19 +143,23 @@ private fun subscribeToPolarACC(deviceIDforFunc: String, api: PolarBleApi, print
     accDisposable = api.startAccStreaming(deviceIDforFunc, accSettings)
         .observeOn(Schedulers.io())
         .subscribe({ accData: PolarAccelerometerData ->
-            val deviceIdx = getDeviceIndexInTimestampArray(deviceIDforFunc) //probably look for a refactor here
+            val deviceIdx =
+                getDeviceIndexInTimestampArray(deviceIDforFunc) //probably look for a refactor here
             //the whole point is to save the first time stamps so I can start at zero
             for (data in accData.samples) {
                 if (firstTimeStamps[deviceIdx].sensorTimeStamp == 0L) {      //if the first timestamp hasn't been set (still zero) then set it
                     firstTimeStamps[deviceIdx].sensorTimeStamp = data.timeStamp
                     firstTimeStamps[deviceIdx].phoneTimeStamp = System.currentTimeMillis()
                 }
-                val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstTimeStamps[deviceIdx].phoneTimeStamp
-                val adjustedSensorTimeStamp = data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
+                val adjustedPhoneTimeStamp =
+                    System.currentTimeMillis() - firstTimeStamps[deviceIdx].phoneTimeStamp
+                val adjustedSensorTimeStamp =
+                    data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
                 val logString =
                     "$deviceIDforFunc ACC    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: $adjustedSensorTimeStamp"
                 val file = File("${getSaveFolder().absolutePath}/$deviceIDforFunc-ACCData.txt")
-                val fileString = "${adjustedPhoneTimeStamp};${adjustedSensorTimeStamp};${data.x};${data.y};${data.z}; \n"
+                val fileString =
+                    "${adjustedPhoneTimeStamp};${adjustedSensorTimeStamp};${data.x};${data.y};${data.z}; \n"
                 if (saveToLogFiles) {
                     file.appendText(fileString)
                 }
@@ -198,7 +204,10 @@ private fun subscribeToPolarGYR(deviceIDforFunc: String, api: PolarBleApi, print
                             file.appendText(fileString)
                         }
                     } else {
-                        Log.d("","Accelerometer first data point not received, first timestamp not set")
+                        Log.d(
+                            "",
+                            "Accelerometer first data point not received, first timestamp not set"
+                        )
                     }
                 }
             }, { error: Throwable ->
@@ -242,6 +251,7 @@ private fun subscribeToPolarMAG(deviceIDforFunc: String, api: PolarBleApi, print
         }, { Log.d(TAG, "MAGNETOMETER stream complete") })
 }
 
+lateinit var ppgSettings: PolarSensorSetting
 private fun subscribeToPolarPPG(deviceIDforFunc: String, api: PolarBleApi, printLogCat: Boolean) {
 
     //SEAN REFACTOR This is an example of how you can get the available device settings.
@@ -249,47 +259,88 @@ private fun subscribeToPolarPPG(deviceIDforFunc: String, api: PolarBleApi, print
     //do this instead (this might happen for the H10 heart rate monitor b/c it has different sensors)
     val ppgAvailableSettingsSingle =
         api.requestStreamSettings(deviceIDforFunc, PolarBleApi.PolarDeviceDataType.PPG)
-    val ppgAvailableSampleRateSetting =
-        ppgAvailableSettingsSingle.blockingGet().settings[PolarSensorSetting.SettingType.SAMPLE_RATE]
-    val ppgSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
-        EnumMap(PolarSensorSetting.SettingType::class.java)
-    ppgSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] =
-        ppgAvailableSampleRateSetting!!.toIntArray()[0] //if you had multiple options, you could probably pull the
-    //max value from this here int array, that'll get you the highest sample rate
-    //sensors appear to have different sample rates for ppg.
-    //only one sample rate is availible when sdk mode is turned off. I haven't messed with sdk mode yet, so hoping to keep it off for now.
-    ppgSettingsMap[PolarSensorSetting.SettingType.RESOLUTION] = 22
-    ppgSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 4
-    val ppgSettings = PolarSensorSetting(ppgSettingsMap)
-    ppgDisposable =
-        api.startPpgStreaming(deviceIDforFunc, ppgSettings)
-            .observeOn(Schedulers.io())
-            .subscribe({ polarPpgData: PolarPpgData ->
-                val deviceIdx = getDeviceIndexInTimestampArray(deviceIDforFunc)
-                if (polarPpgData.type == PolarPpgData.PpgDataType.PPG3_AMBIENT1) {
-                    for (data in polarPpgData.samples) {
-                        if (firstTimeStamps[deviceIdx].sensorTimeStamp != 0L) {//stop any logging until the first time stamp gets set
-                            val adjustedPhoneTimeStamp =
-                                System.currentTimeMillis() - firstTimeStamps[deviceIdx].phoneTimeStamp
-                            val adjustedSensorTimeStamp =
-                                data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
-                            val logString =
-                                "$deviceIDforFunc PPG    ppg0: ${data.channelSamples[0]} ppg1: ${data.channelSamples[1]} ppg2: ${data.channelSamples[2]} ambient: ${data.channelSamples[3]} timeStamp: ${adjustedSensorTimeStamp}"
-                            if (printLogCat) {
-                                Log.d(TAG, logString)
-                            }
-                            val fileString =
-                                "${adjustedPhoneTimeStamp};${adjustedSensorTimeStamp};${data.channelSamples[0]};${data.channelSamples[1]};${data.channelSamples[2]};${data.channelSamples[3]} \n"
-                            val file =
-                                File("${getSaveFolder().absolutePath}/$deviceIDforFunc-PPGData.txt")
-                            if (saveToLogFiles) {
-                                file.appendText(fileString)
+    try { //This is super ghetto, but I need to replace this blocking get with a subscribe. That may take some time, I want to get results first if possible
+        val ppgAvailableSampleRateSetting =
+            ppgAvailableSettingsSingle.blockingGet().settings[PolarSensorSetting.SettingType.SAMPLE_RATE]
+        val ppgSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
+            EnumMap(PolarSensorSetting.SettingType::class.java)
+        ppgSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] =
+            ppgAvailableSampleRateSetting!!.toIntArray()[0] //if you had multiple options, you could probably pull the
+        //max value from this here int array, that'll get you the highest sample rate
+        //sensors appear to have different sample rates for ppg.
+        //only one sample rate is availible when sdk mode is turned off. I haven't messed with sdk mode yet, so hoping to keep it off for now.
+        ppgSettingsMap[PolarSensorSetting.SettingType.RESOLUTION] = 22
+        ppgSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 4
+        ppgSettings = PolarSensorSetting(ppgSettingsMap)
+        ppgDisposable =
+            api.startPpgStreaming(deviceIDforFunc, ppgSettings)
+                .observeOn(Schedulers.io())
+                .subscribe({ polarPpgData: PolarPpgData ->
+                    val deviceIdx = getDeviceIndexInTimestampArray(deviceIDforFunc)
+                    if (polarPpgData.type == PolarPpgData.PpgDataType.PPG3_AMBIENT1) {
+                        for (data in polarPpgData.samples) {
+                            if (firstTimeStamps[deviceIdx].sensorTimeStamp != 0L) {//stop any logging until the first time stamp gets set
+                                val adjustedPhoneTimeStamp =
+                                    System.currentTimeMillis() - firstTimeStamps[deviceIdx].phoneTimeStamp
+                                val adjustedSensorTimeStamp =
+                                    data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
+                                val logString =
+                                    "$deviceIDforFunc PPG    ppg0: ${data.channelSamples[0]} ppg1: ${data.channelSamples[1]} ppg2: ${data.channelSamples[2]} ambient: ${data.channelSamples[3]} timeStamp: ${adjustedSensorTimeStamp}"
+                                if (printLogCat) {
+                                    Log.d(TAG, logString)
+                                }
+                                val fileString =
+                                    "${adjustedPhoneTimeStamp};${adjustedSensorTimeStamp};${data.channelSamples[0]};${data.channelSamples[1]};${data.channelSamples[2]};${data.channelSamples[3]} \n"
+                                val file =
+                                    File("${getSaveFolder().absolutePath}/$deviceIDforFunc-PPGData.txt")
+                                if (saveToLogFiles) {
+                                    file.appendText(fileString)
+                                }
                             }
                         }
                     }
+                }, { error: Throwable ->
+                    Log.e(TAG, "PPG stream failed. Reason $error")
+                }, { Log.d(TAG, "PPG stream complete") })
+    } catch (e: Exception) {
+        Log.e("", "failed to get ppg settings")
+    }
+}
+
+private fun subscribeToPolarECG(deviceIDforFunc: String, api: PolarBleApi, printLogCat: Boolean) {
+    val ecgSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
+        EnumMap(PolarSensorSetting.SettingType::class.java)
+    ecgSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] = 130
+    ecgSettingsMap[PolarSensorSetting.SettingType.RESOLUTION] = 14
+    val ecgSettings = PolarSensorSetting(ecgSettingsMap)
+    ecgDisposable = api.startEcgStreaming(deviceIDforFunc, ecgSettings)
+        .observeOn(Schedulers.io())
+        .subscribe({ polarEcgData: PolarEcgData ->
+            val deviceIdx = getDeviceIndexInTimestampArray(deviceIDforFunc)
+            for (data in polarEcgData.samples) { //SEAN REFACTOR I have to set this up like the ACC stream, b/c acc stream is broken for the H10.
+                //Once i get the acc stream fixed (by not hard coding the acc settings) this will go away.
+                if (firstTimeStamps[deviceIdx].sensorTimeStamp == 0L) {      //if the first timestamp hasn't been set (still zero) then set it
+                    firstTimeStamps[deviceIdx].sensorTimeStamp = data.timeStamp
+                    firstTimeStamps[deviceIdx].phoneTimeStamp = System.currentTimeMillis()
                 }
-            }, { error: Throwable ->
-                Log.e(TAG, "PPG stream failed. Reason $error")
-            }, { Log.d(TAG, "PPG stream complete") })
+                val adjustedPhoneTimeStamp =
+                    System.currentTimeMillis() - firstTimeStamps[deviceIdx].phoneTimeStamp
+                val adjustedSensorTimeStamp =
+                    data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
+                val logString =
+                    "$deviceIDforFunc ECG yV: ${data.voltage} timeStamp: $adjustedSensorTimeStamp"
+                val file = File("${getSaveFolder().absolutePath}/$deviceIDforFunc-ECGData.txt")
+                val fileString =
+                    "$adjustedPhoneTimeStamp;$adjustedSensorTimeStamp;${data.voltage}; \n"
+                if (saveToLogFiles) {
+                    file.appendText(fileString)
+                }
+                if (printLogCat) {
+                    Log.d(TAG, logString)
+                }
+            }
+        }, { error: Throwable ->
+            Log.e(TAG, "Ecg failed because $error")
+        }, { Log.d(TAG, "ecg stream complete") })
 }
 
