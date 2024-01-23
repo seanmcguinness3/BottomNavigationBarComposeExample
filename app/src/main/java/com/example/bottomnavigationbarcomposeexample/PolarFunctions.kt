@@ -19,6 +19,7 @@ import com.polar.sdk.api.model.PolarHrData
 import com.polar.sdk.api.model.PolarMagnetometerData
 import com.polar.sdk.api.model.PolarPpgData
 import com.polar.sdk.api.model.PolarSensorSetting
+import io.reactivex.rxjava3.core.Flowable
 import io.reactivex.rxjava3.core.Single
 import io.reactivex.rxjava3.core.SingleEmitter
 import io.reactivex.rxjava3.schedulers.Schedulers
@@ -34,7 +35,8 @@ private var ecgDisposable: Disposable? = null
 private var accDisposable: Disposable? = null
 private var gyrDisposable: Disposable? = null
 private var magDisposable: Disposable? = null
-private var ppgDisposable: Disposable? = null//LOOK INTO NOT NEEDING THESE
+private var ppgDisposable: Disposable? = null
+private var ppgDisposableNew: Disposable? = null
 
 data class FirstTimeStamps(val sensorID: String) {
     var phoneTimeStamp: Long = 0L
@@ -64,6 +66,7 @@ fun subscribeToAllPolarData(deviceIdArray: List<String>, api: PolarBleApi, print
             Log.d(TAG, "Subscribe to polar device $deviceId called")
             if (deviceId == emptyPolarIDListString) {
                 return //If there's no polar devices, don't run any of this
+                Log.d(TAG,"Polar device list was empty")
             }
             var timeStampInfo = FirstTimeStamps(deviceId)
             firstTimeStamps.add(timeStampInfo)
@@ -259,6 +262,7 @@ private fun subscribeToPolarPPG(deviceIDforFunc: String, api: PolarBleApi, print
     val ppgAvailableSettingsSingle =
         api.requestStreamSettings(deviceIDforFunc, PolarBleApi.PolarDeviceDataType.PPG)
     try { //This is super ghetto, but I need to replace this blocking get with a subscribe. That may take some time, I want to get results first if possible
+
         val ppgAvailableSampleRateSetting =
             ppgAvailableSettingsSingle.blockingGet().settings[PolarSensorSetting.SettingType.SAMPLE_RATE]
         val ppgSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
@@ -276,7 +280,7 @@ private fun subscribeToPolarPPG(deviceIDforFunc: String, api: PolarBleApi, print
                 .observeOn(Schedulers.io())
                 .subscribe({ polarPpgData: PolarPpgData ->
                     val deviceIdx = getDeviceIndexInTimestampArray(deviceIDforFunc)
-                    if (polarPpgData.type == PolarPpgData.PpgDataType.PPG3_AMBIENT1) {
+                    if (polarPpgData.type == PolarPpgData.PpgDataType.PPG3_AMBIENT1) { //what the hell is tha??
                         for (data in polarPpgData.samples) {
                             if (firstTimeStamps[deviceIdx].sensorTimeStamp != 0L) {//stop any logging until the first time stamp gets set
                                 val adjustedPhoneTimeStamp =
@@ -342,4 +346,57 @@ private fun subscribeToPolarECG(deviceIDforFunc: String, api: PolarBleApi, print
             Log.e(TAG, "Ecg failed because $error")
         }, { Log.d(TAG, "ecg stream complete") })
 }
+
+private fun subscribeToPPGNew(deviceID: String){
+    ppgDisposableNew = requestStreamSettings(deviceID, PolarBleApi.PolarDeviceDataType.PPG)
+        .flatMap { settings: PolarSensorSetting ->
+            api.startPpgStreaming(deviceID, settings)
+        }
+        .subscribe(
+            { polarPpgData: PolarPpgData ->
+                for (data in polarPpgData.samples){
+                    "$deviceID PPG    ppg0: ${data.channelSamples[0]} ppg1: ${data.channelSamples[1]} ppg2: ${data.channelSamples[2]} ambient: ${data.channelSamples[3]}"
+                }
+            },{ error: Throwable ->
+                Log.e("","new PPG Subscription failed, because $error")
+            },
+            {Log.d("","When does this shit get called??")}
+        )
+}
+
+private fun requestStreamSettings(identifier: String, feature: PolarBleApi.PolarDeviceDataType): Flowable<PolarSensorSetting> {
+    val availableSettings = api.requestStreamSettings(identifier, feature)
+    val allSettings = api.requestFullStreamSettings(identifier, feature)
+        .onErrorReturn { error: Throwable ->
+            Log.w(TAG, "Full stream settings are not available for feature $feature. REASON: $error")
+            PolarSensorSetting(emptyMap())
+        }
+    return Single.zip(availableSettings, allSettings) { available: PolarSensorSetting, all: PolarSensorSetting ->
+        if (available.settings.isEmpty()) {
+            throw Throwable("Settings are not available")
+        } else {
+            Log.d(TAG, "Feature " + feature + " available settings " + available.settings)
+            Log.d(TAG, "Feature " + feature + " all settings " + all.settings)
+            return@zip android.util.Pair(available, all)
+        }
+    }
+        .observeOn(AndroidSchedulers.mainThread())
+        .toFlowable()
+        .flatMap { sensorSettings: android.util.Pair<PolarSensorSetting, PolarSensorSetting> ->
+            showAllSettingsDialog(
+                sensorSettings.first.settings,
+                sensorSettings.second.settings
+            ).toFlowable()
+        }
+}
+
+fun showAllSettingsDialog(settings: MutableMap<PolarSensorSetting.SettingType, Set<Int>>, settings1: MutableMap<PolarSensorSetting.SettingType, Set<Int>>): Any {
+
+    return Single.create{ e: SingleEmitter<PolarSensorSetting> ->
+        val selected: MutableMap<PolarSensorSetting.SettingType, Int> = EnumMap(PolarSensorSetting.SettingType::class.java)
+
+    }
+}
+
+
 
