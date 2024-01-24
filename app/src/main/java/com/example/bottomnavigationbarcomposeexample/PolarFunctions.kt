@@ -65,8 +65,8 @@ fun subscribeToAllPolarData(deviceIdArray: List<String>, api: PolarBleApi, print
         for (deviceId in deviceIdArray) {
             Log.d(TAG, "Subscribe to polar device $deviceId called")
             if (deviceId == emptyPolarIDListString) {
-                return //If there's no polar devices, don't run any of this
                 Log.d(TAG,"Polar device list was empty")
+                return //If there's no polar devices, don't run any of this
             }
             var timeStampInfo = FirstTimeStamps(deviceId)
             firstTimeStamps.add(timeStampInfo)
@@ -327,6 +327,7 @@ private fun subscribeToPolarECG(deviceIDforFunc: String, api: PolarBleApi, print
                 if (firstTimeStamps[deviceIdx].sensorTimeStamp == 0L) {      //if the first timestamp hasn't been set (still zero) then set it
                     val elapsedTime = System.currentTimeMillis() - firstPhoneTimeStamp
                     firstTimeStamps[deviceIdx].sensorTimeStamp = (data.timeStamp - (elapsedTime * 1e6)).toLong()
+                    Log.d("","Elapsed time for $deviceIDforFunc: $elapsedTime. time stamp index: $deviceIdx")
                     firstTimeStamps[deviceIdx].phoneTimeStamp = System.currentTimeMillis()
                 }
                 val adjustedPhoneTimeStamp =

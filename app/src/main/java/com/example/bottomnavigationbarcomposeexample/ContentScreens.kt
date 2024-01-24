@@ -247,8 +247,8 @@ fun ListItem(name: String) {
                         //I think you could probably use it to add the device to the list, and change the text to connected. That way you don't need this delay in the
                         //launched effect, and if you execute the below code in the override it might not matter what screen you're on.
                         if (name.contains("Polar")) {
+                            Log.d("", "adding polar device $deviceID to home screen")
                             if (firstConnectedDeviceFlag) {
-                                Log.d("", "Trying to add device to home screen")
                                 deviceListForHomeScreen[0] = name
                                 polarDeviceIdListForConnection[0] = getPolarDeviceIDFromName(name)
                                 firstConnectedDeviceFlag = false
