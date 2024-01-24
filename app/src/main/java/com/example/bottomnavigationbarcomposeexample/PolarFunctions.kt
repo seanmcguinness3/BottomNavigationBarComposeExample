@@ -73,9 +73,9 @@ fun subscribeToAllPolarData(deviceIdArray: List<String>, api: PolarBleApi, print
             subscribeToPolarHR(deviceId, api, printLogCat)
             subscribeToPolarACC(deviceId, api, printLogCat)
             subscribeToPolarGYR(deviceId, api, printLogCat)
-            subscribeToPolarMAG(deviceId, api, printLogCat)
-            subscribeToPolarPPG(deviceId, api, printLogCat)
-            subscribeToPolarECG(deviceId, api, printLogCat)
+            subscribeToPolarMAG(deviceId)
+            subscribeToPolarPPG(deviceId)
+            subscribeToPolarECG(deviceId)
 
             hRFileName = generateNewFile("$deviceId-HRData.txt")
             aCCFileName = generateNewFile("$deviceId-ACCData.txt")
@@ -177,198 +177,115 @@ private fun subscribeToPolarACC(deviceIDforFunc: String, api: PolarBleApi, print
 }
 
 
-private fun subscribeToPolarGYR(deviceIDforFunc: String, api: PolarBleApi, printLogCat: Boolean) {
-    val gyrSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
-        EnumMap(PolarSensorSetting.SettingType::class.java)
-    gyrSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] = 52
-    gyrSettingsMap[PolarSensorSetting.SettingType.RESOLUTION] = 16
-    gyrSettingsMap[PolarSensorSetting.SettingType.RANGE] = 2000
-    gyrSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 3
-    val gyrSettings = PolarSensorSetting(gyrSettingsMap)
-    gyrDisposable =
-        api.startGyroStreaming(deviceIDforFunc, gyrSettings).observeOn(Schedulers.io())
-            .subscribe({ gyrData: PolarGyroData ->
-                val deviceIdx = getDeviceIndexInTimestampArray(deviceIDforFunc)
-                for (data in gyrData.samples) {
-                    if (firstTimeStamps[deviceIdx].sensorTimeStamp != 0L) {//stop any logging until the first time stamp gets set
-                        val adjustedPhoneTimeStamp =
-                            System.currentTimeMillis() - firstPhoneTimeStamp
-                        val adjustedSensorTimeStamp =
-                            data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
-                        val logString =
-                            "$deviceIDforFunc GYR    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${adjustedSensorTimeStamp}"
-                        if (printLogCat) {
-                            Log.d(TAG, logString)
-                        }
-                        val fileString =
-                            "${adjustedPhoneTimeStamp};${adjustedSensorTimeStamp};${data.x};${data.y};${data.z} \n"
-                        val file =
-                            File("${getSaveFolder().absolutePath}/$deviceIDforFunc-GYRData.txt")
-                        if (saveToLogFiles) {
-                            file.appendText(fileString)
-                        }
-                    } else {
-                        Log.d(
-                            "",
-                            "Accelerometer first data point not received, first timestamp not set"
-                        )
-                    }
+private fun subscribeToPolarGYR(deviceId: String) {
+    val isDisposed = gyrDisposable?.isDisposed ?: true
+    if (isDisposed) {
+        gyrDisposable =
+            requestStreamSettings(deviceId, PolarBleApi.PolarDeviceDataType.GYRO)
+                .flatMap { settings: PolarSensorSetting ->
+                    api.startGyroStreaming(deviceId, settings)
                 }
-            }, { error: Throwable ->
-                Log.e(TAG, "GYR stream failed. Reason $error")
-            }, { Log.d(TAG, "GYR stream complete") })
-}
-
-private fun subscribeToPolarMAG(deviceIDforFunc: String, api: PolarBleApi, printLogCat: Boolean) {
-    val magSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
-        EnumMap(PolarSensorSetting.SettingType::class.java)
-    magSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] = 20
-    magSettingsMap[PolarSensorSetting.SettingType.RESOLUTION] = 16
-    magSettingsMap[PolarSensorSetting.SettingType.RANGE] = 50
-    magSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 3
-    val magSettings = PolarSensorSetting(magSettingsMap)
-    magDisposable = api.startMagnetometerStreaming(deviceIDforFunc, magSettings)
-        .observeOn(Schedulers.io())
-        .subscribe({ polarMagData: PolarMagnetometerData ->
-            for (data in polarMagData.samples) {
-                val deviceIdx = getDeviceIndexInTimestampArray(deviceIDforFunc)
-                if (firstTimeStamps[deviceIdx].sensorTimeStamp != 0L) {//stop any logging until the first time stamp gets set
-                    val adjustedPhoneTimeStamp =
-                        System.currentTimeMillis() - firstPhoneTimeStamp
-                    val adjustedSensorTimeStamp =
-                        data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
-                    val logString =
-                        "$deviceIDforFunc MAG    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: $adjustedSensorTimeStamp"
-                    if (printLogCat) {
-                        Log.d(TAG, logString)
-                    }
-                    val fileString =
-                        "${adjustedPhoneTimeStamp};${adjustedSensorTimeStamp};${data.x};${data.y};${data.z} \n"
-                    val file = File("${getSaveFolder().absolutePath}/$deviceIDforFunc-MAGData.txt")
-                    if (saveToLogFiles) {
-                        file.appendText(fileString)
-                    }
-                }
-            }
-        }, { error: Throwable ->
-            Log.e(TAG, "MAGNETOMETER stream failed. Reason $error")
-        }, { Log.d(TAG, "MAGNETOMETER stream complete") })
-}
-
-lateinit var ppgSettings: PolarSensorSetting
-private fun subscribeToPolarPPG(deviceIDforFunc: String, api: PolarBleApi, printLogCat: Boolean) {
-
-    //SEAN REFACTOR This is an example of how you can get the available device settings.
-    //If you run into a situation where you are considering hardcoding settings based on device ID's
-    //do this instead (this might happen for the H10 heart rate monitor b/c it has different sensors)
-    val ppgAvailableSettingsSingle =
-        api.requestStreamSettings(deviceIDforFunc, PolarBleApi.PolarDeviceDataType.PPG)
-    try { //This is super ghetto, but I need to replace this blocking get with a subscribe. That may take some time, I want to get results first if possible
-
-        val ppgAvailableSampleRateSetting =
-            ppgAvailableSettingsSingle.blockingGet().settings[PolarSensorSetting.SettingType.SAMPLE_RATE]
-        val ppgSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
-            EnumMap(PolarSensorSetting.SettingType::class.java)
-        ppgSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] =
-            ppgAvailableSampleRateSetting!!.toIntArray()[0] //if you had multiple options, you could probably pull the
-        //max value from this here int array, that'll get you the highest sample rate
-        //sensors appear to have different sample rates for ppg.
-        //only one sample rate is availible when sdk mode is turned off. I haven't messed with sdk mode yet, so hoping to keep it off for now.
-        ppgSettingsMap[PolarSensorSetting.SettingType.RESOLUTION] = 22
-        ppgSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 4
-        ppgSettings = PolarSensorSetting(ppgSettingsMap)
-        ppgDisposable =
-            api.startPpgStreaming(deviceIDforFunc, ppgSettings)
-                .observeOn(Schedulers.io())
-                .subscribe({ polarPpgData: PolarPpgData ->
-                    val deviceIdx = getDeviceIndexInTimestampArray(deviceIDforFunc)
-                    if (polarPpgData.type == PolarPpgData.PpgDataType.PPG3_AMBIENT1) { //what the hell is tha??
-                        for (data in polarPpgData.samples) {
-                            if (firstTimeStamps[deviceIdx].sensorTimeStamp != 0L) {//stop any logging until the first time stamp gets set
-                                val adjustedPhoneTimeStamp =
-                                    System.currentTimeMillis() - firstPhoneTimeStamp
-                                val adjustedSensorTimeStamp =
-                                    data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
-                                val logString =
-                                    "$deviceIDforFunc PPG    ppg0: ${data.channelSamples[0]} ppg1: ${data.channelSamples[1]} ppg2: ${data.channelSamples[2]} ambient: ${data.channelSamples[3]} timeStamp: ${adjustedSensorTimeStamp}"
-                                if (printLogCat) {
-                                    Log.d(TAG, logString)
-                                }
-                                val fileString =
-                                    "${adjustedPhoneTimeStamp};${adjustedSensorTimeStamp};${data.channelSamples[0]};${data.channelSamples[1]};${data.channelSamples[2]};${data.channelSamples[3]} \n"
-                                val file =
-                                    File("${getSaveFolder().absolutePath}/$deviceIDforFunc-PPGData.txt")
-                                if (saveToLogFiles) {
-                                    file.appendText(fileString)
-                                }
-                            }
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                    { polarGyroData: PolarGyroData ->
+                        for (data in polarGyroData.samples) {
+                            Log.d(TAG, "GYR    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
                         }
-                    }
-                }, { error: Throwable ->
-                    Log.e(TAG, "PPG stream failed. Reason $error")
-                }, { Log.d(TAG, "PPG stream complete") })
-    } catch (e: Exception) {
-        Log.e("", "failed to get ppg settings")
+                    },
+                    { error: Throwable ->
+                        Log.e(TAG, "GYR stream failed. Reason $error")
+                    },
+                    { Log.d(TAG, "GYR stream complete") }
+                )
+    } else {
+        // NOTE dispose will stop streaming if it is "running"
+        gyrDisposable?.dispose()
+    }
+
+}
+private fun subscribeToPolarMAG(deviceId: String){
+    val isDisposed = magDisposable?.isDisposed ?: true
+    if (isDisposed) {
+        magDisposable =
+            requestStreamSettings(deviceId, PolarBleApi.PolarDeviceDataType.MAGNETOMETER)
+                .flatMap { settings: PolarSensorSetting ->
+                    api.startMagnetometerStreaming(deviceId, settings)
+                }
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                    { polarMagData: PolarMagnetometerData ->
+                        for (data in polarMagData.samples) {
+                            Log.d(TAG, "MAG    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
+                        }
+                    },
+                    { error: Throwable ->
+                        Log.e(TAG, "MAGNETOMETER stream failed. Reason $error")
+                    },
+                    { Log.d(TAG, "MAGNETOMETER stream complete") }
+                )
+    } else {
+        // NOTE dispose will stop streaming if it is "running"
+        magDisposable!!.dispose()
     }
 }
 
-private fun subscribeToPolarECG(deviceIDforFunc: String, api: PolarBleApi, printLogCat: Boolean) {
-    val ecgSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
-        EnumMap(PolarSensorSetting.SettingType::class.java)
-    ecgSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] = 130
-    ecgSettingsMap[PolarSensorSetting.SettingType.RESOLUTION] = 14
-    val ecgSettings = PolarSensorSetting(ecgSettingsMap)
-    ecgDisposable = api.startEcgStreaming(deviceIDforFunc, ecgSettings)
-        .observeOn(Schedulers.io())
-        .subscribe({ polarEcgData: PolarEcgData ->
-            val deviceIdx = getDeviceIndexInTimestampArray(deviceIDforFunc)
-            for (data in polarEcgData.samples) { //SEAN REFACTOR I have to set this up like the ACC stream, b/c acc stream is broken for the H10.
-                //Once i get the acc stream fixed (by not hard coding the acc settings) this will go away.
-                if (firstTimeStamps[deviceIdx].sensorTimeStamp == 0L) {      //if the first timestamp hasn't been set (still zero) then set it
-                    val elapsedTime = System.currentTimeMillis() - firstPhoneTimeStamp
-                    firstTimeStamps[deviceIdx].sensorTimeStamp = (data.timeStamp - (elapsedTime * 1e6)).toLong()
-                    Log.d("","Elapsed time for $deviceIDforFunc: $elapsedTime. time stamp index: $deviceIdx")
-                    firstTimeStamps[deviceIdx].phoneTimeStamp = System.currentTimeMillis()
+private fun subscribeToPolarPPG(deviceId: String) {
+    val isDisposed = ppgDisposable?.isDisposed ?: true
+    if (isDisposed) {
+        ppgDisposable =
+            requestStreamSettings(deviceId, PolarBleApi.PolarDeviceDataType.PPG)
+                .flatMap { settings: PolarSensorSetting ->
+                    api.startPpgStreaming(deviceId, settings)
                 }
-                val adjustedPhoneTimeStamp =
-                    System.currentTimeMillis() - firstPhoneTimeStamp
-                val adjustedSensorTimeStamp =
-                    data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
-                val logString =
-                    "$deviceIDforFunc ECG yV: ${data.voltage} timeStamp: $adjustedSensorTimeStamp"
-                val file = File("${getSaveFolder().absolutePath}/$deviceIDforFunc-ECGData.txt")
-                val fileString =
-                    "$adjustedPhoneTimeStamp;$adjustedSensorTimeStamp;${data.voltage}; \n"
-                if (saveToLogFiles) {
-                    file.appendText(fileString)
-                }
-                if (printLogCat) {
-                    Log.d(TAG, logString)
-                }
+                .subscribe(
+                    { polarPpgData: PolarPpgData ->
+                        val deviceIdx = getDeviceIndexInTimestampArray(deviceId)
+                        if (polarPpgData.type == PolarPpgData.PpgDataType.PPG3_AMBIENT1) {
+                            for (data in polarPpgData.samples) {
+                                val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
+                                val adjustedSensorTimeStamp = data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
+                                val fileString = "${adjustedPhoneTimeStamp};${adjustedSensorTimeStamp};${data.channelSamples[0]};${data.channelSamples[1]};${data.channelSamples[2]};${data.channelSamples[3]} \n"
+                                val file = File("${getSaveFolder().absolutePath}/$deviceId-PPGData.txt")
+                                if (saveToLogFiles) { file.appendText(fileString) }
+                            }
+                        }
+                    },
+                    { error: Throwable ->
+                        Log.e(TAG, "PPG stream failed. Reason $error")
+                    },
+                    { Log.d(TAG, "PPG stream complete") }
+                )
+    } else {
+        // NOTE dispose will stop streaming if it is "running"
+        ppgDisposable?.dispose()
+    }
+}
+
+private fun subscribeToPolarECG(deviceId: String){
+    val isDisposed = ecgDisposable?.isDisposed ?: true
+    if (isDisposed) {
+        ecgDisposable = requestStreamSettings(deviceId, PolarBleApi.PolarDeviceDataType.ECG)
+            .flatMap { settings: PolarSensorSetting ->
+                api.startEcgStreaming(deviceId, settings)
             }
-        }, { error: Throwable ->
-            Log.e(TAG, "Ecg failed because $error")
-        }, { Log.d(TAG, "ecg stream complete") })
+            .subscribe(
+                { polarEcgData: PolarEcgData ->
+                    for (data in polarEcgData.samples) {
+                        Log.d(TAG, "    yV: ${data.voltage} timeStamp: ${data.timeStamp}")
+                    }
+                },
+                { error: Throwable ->
+                    Log.e(TAG, "ECG stream failed. Reason $error")
+                },
+                { Log.d(TAG, "ECG stream complete") }
+            )
+    } else {
+        // NOTE stops streaming if it is "running"
+        ecgDisposable?.dispose()
+    }
 }
 
-/*private fun subscribeToPPGNew(deviceID: String){
-    ppgDisposableNew = requestStreamSettings(deviceID, PolarBleApi.PolarDeviceDataType.PPG)
-        .flatMap { settings: PolarSensorSetting ->
-            api.startPpgStreaming(deviceID, settings)
-        }
-        .subscribe(
-            { polarPpgData: PolarPpgData ->
-                for (data in polarPpgData.samples){
-                    "$deviceID PPG    ppg0: ${data.channelSamples[0]} ppg1: ${data.channelSamples[1]} ppg2: ${data.channelSamples[2]} ambient: ${data.channelSamples[3]}"
-                }
-            },{ error: Throwable ->
-                Log.e("","new PPG Subscription failed, because $error")
-            },
-            {Log.d("","When does this shit get called??")}
-        )
-}
-
-private fun requestStreamSettings(identifier: String, feature: PolarBleApi.PolarDeviceDataType): Flowable<PolarSensorSetting> {
+fun requestStreamSettings(identifier: String, feature: PolarBleApi.PolarDeviceDataType): Flowable<PolarSensorSetting> {
     val availableSettings = api.requestStreamSettings(identifier, feature)
     val allSettings = api.requestFullStreamSettings(identifier, feature)
         .onErrorReturn { error: Throwable ->
@@ -387,20 +304,33 @@ private fun requestStreamSettings(identifier: String, feature: PolarBleApi.Polar
         .observeOn(AndroidSchedulers.mainThread())
         .toFlowable()
         .flatMap { sensorSettings: android.util.Pair<PolarSensorSetting, PolarSensorSetting> ->
-            showAllSettingsDialog(
-                sensorSettings.first.settings,
-                sensorSettings.second.settings
-            ).toFlowable()
+            showAllSettingsDialogNew(sensorSettings.first.settings).toFlowable()
         }
 }
 
-fun showAllSettingsDialog(settings: MutableMap<PolarSensorSetting.SettingType, Set<Int>>, settings1: MutableMap<PolarSensorSetting.SettingType, Set<Int>>): Any {
+fun showAllSettingsDialogNew(available: Map<PolarSensorSetting.SettingType, Set<Int>>): Single<PolarSensorSetting> {
+    return Single.create { e: SingleEmitter<PolarSensorSetting> ->
+        val selected: MutableMap<PolarSensorSetting.SettingType, Int> = EnumMap(
+            PolarSensorSetting.SettingType::class.java)
+        setSettingToMax(selected, PolarSensorSetting.SettingType.SAMPLE_RATE, available)
+        setSettingToMax(selected, PolarSensorSetting.SettingType.RESOLUTION, available)
+        setSettingToMax(selected, PolarSensorSetting.SettingType.RANGE, available)
+        setSettingToMax(selected, PolarSensorSetting.SettingType.CHANNELS, available)
+        e.onSuccess(PolarSensorSetting(selected))
+    }.subscribeOn(AndroidSchedulers.mainThread())
+}
 
-    return Single.create{ e: SingleEmitter<PolarSensorSetting> ->
-        val selected: MutableMap<PolarSensorSetting.SettingType, Int> = EnumMap(PolarSensorSetting.SettingType::class.java)
-
+fun setSettingToMax(selected: MutableMap<PolarSensorSetting.SettingType, Int>, type: PolarSensorSetting.SettingType, availibleSettings: Map<PolarSensorSetting.SettingType, Set<Int>>){
+    var maxValue = 0
+    val availibleValuesForType = availibleSettings[type]?.toList()
+    if (availibleValuesForType != null) {
+        for (i in availibleValuesForType.indices){
+            if (availibleValuesForType[i] > maxValue){
+                maxValue = availibleValuesForType[i]
+                Log.d("","Found value ${availibleValuesForType[i]} for setting $type")
+            }
+        }
     }
-}*/
-
-
-
+    selected[type] = maxValue
+    Log.d("","Setting $type was autoset to $maxValue")
+}
