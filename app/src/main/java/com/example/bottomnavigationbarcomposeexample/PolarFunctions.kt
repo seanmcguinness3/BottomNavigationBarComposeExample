@@ -108,7 +108,7 @@ private fun subscribeToPolarHR(deviceIDforFunc: String, api: PolarBleApi, printL
                 val deviceIdx = getDeviceIndexInTimestampArray(deviceIDforFunc)
                 for (sample in hrData.samples) {
                     val adjustedPhoneTimeStamp =
-                        System.currentTimeMillis() - firstTimeStamps[deviceIdx].phoneTimeStamp
+                        System.currentTimeMillis() - firstPhoneTimeStamp
                     val logString =
                         "$deviceIDforFunc HR bpm: ${sample.hr} rrs: ${sample.rrsMs} rrAvailable: ${sample.rrAvailable} contactStatus: ${sample.contactStatus} contactStatusSupported: ${sample.contactStatusSupported}"
                     Log.d(TAG, logString) //printing no matter what
@@ -150,11 +150,13 @@ private fun subscribeToPolarACC(deviceIDforFunc: String, api: PolarBleApi, print
             //the whole point is to save the first time stamps so I can start at zero
             for (data in accData.samples) {
                 if (firstTimeStamps[deviceIdx].sensorTimeStamp == 0L) {      //if the first timestamp hasn't been set (still zero) then set it
-                    firstTimeStamps[deviceIdx].sensorTimeStamp = data.timeStamp
-                    firstTimeStamps[deviceIdx].phoneTimeStamp = System.currentTimeMillis()
+                    val elapsedTime = System.currentTimeMillis() - firstPhoneTimeStamp //use elapsed time to account for time diff in sensor connection
+                    firstTimeStamps[deviceIdx].sensorTimeStamp = (data.timeStamp - (elapsedTime * 1e6)).toLong()
+                    Log.d("","Elapsed time for $deviceIDforFunc: $elapsedTime. time stamp index: $deviceIdx")
+                    firstTimeStamps[deviceIdx].phoneTimeStamp = System.currentTimeMillis() //won't be necessary soon
                 }
                 val adjustedPhoneTimeStamp =
-                    System.currentTimeMillis() - firstTimeStamps[deviceIdx].phoneTimeStamp
+                    System.currentTimeMillis() - firstPhoneTimeStamp
                 val adjustedSensorTimeStamp =
                     data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
                 val logString =
@@ -190,7 +192,7 @@ private fun subscribeToPolarGYR(deviceIDforFunc: String, api: PolarBleApi, print
                 for (data in gyrData.samples) {
                     if (firstTimeStamps[deviceIdx].sensorTimeStamp != 0L) {//stop any logging until the first time stamp gets set
                         val adjustedPhoneTimeStamp =
-                            System.currentTimeMillis() - firstTimeStamps[deviceIdx].phoneTimeStamp
+                            System.currentTimeMillis() - firstPhoneTimeStamp
                         val adjustedSensorTimeStamp =
                             data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
                         val logString =
@@ -232,7 +234,7 @@ private fun subscribeToPolarMAG(deviceIDforFunc: String, api: PolarBleApi, print
                 val deviceIdx = getDeviceIndexInTimestampArray(deviceIDforFunc)
                 if (firstTimeStamps[deviceIdx].sensorTimeStamp != 0L) {//stop any logging until the first time stamp gets set
                     val adjustedPhoneTimeStamp =
-                        System.currentTimeMillis() - firstTimeStamps[deviceIdx].phoneTimeStamp
+                        System.currentTimeMillis() - firstPhoneTimeStamp
                     val adjustedSensorTimeStamp =
                         data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
                     val logString =
@@ -284,7 +286,7 @@ private fun subscribeToPolarPPG(deviceIDforFunc: String, api: PolarBleApi, print
                         for (data in polarPpgData.samples) {
                             if (firstTimeStamps[deviceIdx].sensorTimeStamp != 0L) {//stop any logging until the first time stamp gets set
                                 val adjustedPhoneTimeStamp =
-                                    System.currentTimeMillis() - firstTimeStamps[deviceIdx].phoneTimeStamp
+                                    System.currentTimeMillis() - firstPhoneTimeStamp
                                 val adjustedSensorTimeStamp =
                                     data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
                                 val logString =
@@ -323,11 +325,12 @@ private fun subscribeToPolarECG(deviceIDforFunc: String, api: PolarBleApi, print
             for (data in polarEcgData.samples) { //SEAN REFACTOR I have to set this up like the ACC stream, b/c acc stream is broken for the H10.
                 //Once i get the acc stream fixed (by not hard coding the acc settings) this will go away.
                 if (firstTimeStamps[deviceIdx].sensorTimeStamp == 0L) {      //if the first timestamp hasn't been set (still zero) then set it
-                    firstTimeStamps[deviceIdx].sensorTimeStamp = data.timeStamp
+                    val elapsedTime = System.currentTimeMillis() - firstPhoneTimeStamp
+                    firstTimeStamps[deviceIdx].sensorTimeStamp = (data.timeStamp - (elapsedTime * 1e6)).toLong()
                     firstTimeStamps[deviceIdx].phoneTimeStamp = System.currentTimeMillis()
                 }
                 val adjustedPhoneTimeStamp =
-                    System.currentTimeMillis() - firstTimeStamps[deviceIdx].phoneTimeStamp
+                    System.currentTimeMillis() - firstPhoneTimeStamp
                 val adjustedSensorTimeStamp =
                     data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
                 val logString =
@@ -347,7 +350,7 @@ private fun subscribeToPolarECG(deviceIDforFunc: String, api: PolarBleApi, print
         }, { Log.d(TAG, "ecg stream complete") })
 }
 
-private fun subscribeToPPGNew(deviceID: String){
+/*private fun subscribeToPPGNew(deviceID: String){
     ppgDisposableNew = requestStreamSettings(deviceID, PolarBleApi.PolarDeviceDataType.PPG)
         .flatMap { settings: PolarSensorSetting ->
             api.startPpgStreaming(deviceID, settings)
@@ -396,7 +399,7 @@ fun showAllSettingsDialog(settings: MutableMap<PolarSensorSetting.SettingType, S
         val selected: MutableMap<PolarSensorSetting.SettingType, Int> = EnumMap(PolarSensorSetting.SettingType::class.java)
 
     }
-}
+}*/
 
 
 

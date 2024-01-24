@@ -7,6 +7,7 @@ import android.bluetooth.le.ScanResult
 import android.content.Context
 import android.os.Build
 import android.util.Log
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -48,6 +49,7 @@ var polarDeviceIdListForConnection = mutableStateListOf<String>(emptyPolarIDList
 lateinit var voMaster: BluetoothDevice
 var lapTimeFileExists = false
 var bleStreamsStarted = false
+var firstPhoneTimeStamp = System.currentTimeMillis()
 
 @Composable
 fun HomeScreen() {
@@ -73,13 +75,14 @@ fun HomeScreen() {
                 onClick = {
                     collectingData = !collectingData
                     saveToLogFiles(collectingData) //only save to log files when collecting data
+                    firstPhoneTimeStamp = System.currentTimeMillis()//this will be the only place phone time stamp gets set
 
                     if (!bleStreamsStarted) {
                         if (::voMaster.isInitialized) {
                             subscribeToVOMaster(voMaster, context = context)
                         }
                         saveToLogFiles(true)
-                        subscribeToAllPolarData(polarDeviceIdListForConnection.toList(), api, true)
+                        subscribeToAllPolarData(polarDeviceIdListForConnection.toList(), api, false)
                         bleStreamsStarted = true
                     }
                 }) {
@@ -105,8 +108,9 @@ fun HomeScreen() {
                     generateNewFile("Lap Times.txt")
                     lapTimeFileExists = true
                 }
+                Toast.makeText(context,"Lap Button Pressed",Toast.LENGTH_SHORT)
                 val file = File("${getSaveFolder().absolutePath}/Lap Times.txt")
-                val timeStamp = System.currentTimeMillis() - firstTimeStamps[0].phoneTimeStamp
+                val timeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
                 file.appendText("Lap Time: $timeStamp \n")
             }) {
             Text("Lap Time Stamp")

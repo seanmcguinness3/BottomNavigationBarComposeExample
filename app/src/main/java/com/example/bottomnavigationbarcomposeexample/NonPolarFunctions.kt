@@ -110,10 +110,11 @@ private val gattCallback = object :BluetoothGattCallback(){
             logString += "${strValueForDebug[i]}, "
             secondToLastIdx = i
         }
-        val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstTimeStamps[0].phoneTimeStamp //The phone first time stamp should really only be set once, not on a per sensor basis
+        //sean bug bugbug
+        val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp //The phone first time stamp should really only be set once, not on a per sensor basis
         //the sensor timestamps should actually be adjusted based on how long they start after the first connection is made, but I don't really wanna deal with that right now
         //sean refactor You'll need to get a better idea of what to do with the timestamps, then implement that. It may actually be that we can just use the phone time stamps, but who knows.
-        logString += "${strValueForDebug[secondToLastIdx+1]}\n"
+        logString += "$adjustedPhoneTimeStamp; ${strValueForDebug[secondToLastIdx+1]}\n"
         Log.d(TAG, "$adjustedPhoneTimeStamp; Data: $logString")
         val file = File("${getSaveFolder().absolutePath}/${uuidString}.txt")
         file.appendText(logString)

@@ -126,7 +126,7 @@ class MainActivity : ComponentActivity() {
 
         init {
             // getting the location client
-            locationFile.appendText("TimeStamp; Latitude; Longitude \n")
+            locationFile.appendText("TimeStamp; Latitude; Longitude; Altitude; \n")
             locationClient = LocationServices.getFusedLocationProviderClient(context)
             request = createRequest()
         }
@@ -149,14 +149,15 @@ class MainActivity : ComponentActivity() {
 
         override fun onLocationResult(location: LocationResult) {
             Log.d("","Location update latitude: ${location.lastLocation!!.latitude}")
-            Log.d("","Location update longitude: ${location.lastLocation!!.longitude}")
+            Log.d("","Location update altitude: ${location.lastLocation!!.altitude}")
+
             var timeStamp = 0L
             if (firstTimeStamps.size >= 1){
-                timeStamp = System.currentTimeMillis() - firstTimeStamps[0].phoneTimeStamp
+                timeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
             }else{
                 timeStamp = 0L
             }
-            locationFile.appendText("$timeStamp; ${location.lastLocation!!.latitude}; ${location.lastLocation!!.longitude} \n")
+            locationFile.appendText("$timeStamp; ${location.lastLocation!!.latitude}; ${location.lastLocation!!.longitude}; ${location.lastLocation!!.altitude} \n")
         }
 
         override fun onLocationAvailability(availability: LocationAvailability) {
