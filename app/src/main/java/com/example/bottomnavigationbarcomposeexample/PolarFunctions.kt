@@ -36,7 +36,7 @@ private var accDisposable: Disposable? = null
 private var gyrDisposable: Disposable? = null
 private var magDisposable: Disposable? = null
 private var ppgDisposable: Disposable? = null
-private var ppgDisposableNew: Disposable? = null
+private var hrDisposable: Disposable? = null
 
 data class FirstTimeStamps(val sensorID: String) {
     var phoneTimeStamp: Long = 0L
@@ -58,7 +58,7 @@ var firstTimeStamps: MutableList<FirstTimeStamps> = ArrayList()
 fun saveToLogFiles(saveToFiles: Boolean) {
     saveToLogFiles = saveToFiles
 }
-
+//Last I looked it was having a hard time connectiong to either the ACC or PPG stream. Maybe low sensor power?
 fun subscribeToAllPolarData(deviceIdArray: List<String>, api: PolarBleApi, printLogCat: Boolean) {
     val isDisposed = dcDisposable?.isDisposed ?: true
     if (isDisposed) {
@@ -70,9 +70,9 @@ fun subscribeToAllPolarData(deviceIdArray: List<String>, api: PolarBleApi, print
             }
             var timeStampInfo = FirstTimeStamps(deviceId)
             firstTimeStamps.add(timeStampInfo)
-            subscribeToPolarHR(deviceId, api, printLogCat)
-            subscribeToPolarACC(deviceId, api, printLogCat)
-            subscribeToPolarGYR(deviceId, api, printLogCat)
+            subscribeToPolarHR(deviceId)
+            subscribeToPolarACC(deviceId)
+            subscribeToPolarGYR(deviceId)
             subscribeToPolarMAG(deviceId)
             subscribeToPolarPPG(deviceId)
             subscribeToPolarECG(deviceId)
@@ -98,8 +98,17 @@ fun subscribeToAllPolarData(deviceIdArray: List<String>, api: PolarBleApi, print
     }
 }
 
+fun getDeviceIndexInTimestampArray(deviceIDforFunc: String): Int {
+    var index = -1
+    for (i in firstTimeStamps.indices) {
+        if (firstTimeStamps[i].sensorID == deviceIDforFunc) {
+            index = i
+        }
+    }
+    return index
+}
 
-private fun subscribeToPolarHR(deviceIDforFunc: String, api: PolarBleApi, printLogCat: Boolean) {
+private fun subscribeToPolarHROld(deviceIDforFunc: String, api: PolarBleApi, printLogCat: Boolean) {
 
     var newDisposable: Disposable = //LOOK INTO NOT NEEDING THIS
         api.startHrStreaming(deviceIDforFunc)
@@ -124,17 +133,57 @@ private fun subscribeToPolarHR(deviceIDforFunc: String, api: PolarBleApi, printL
             }, { Log.d(TAG, "HR stream complete") })
 }
 
-fun getDeviceIndexInTimestampArray(deviceIDforFunc: String): Int {
-    var index = -1
-    for (i in firstTimeStamps.indices) {
-        if (firstTimeStamps[i].sensorID == deviceIDforFunc) {
-            index = i
-        }
+private fun subscribeToPolarHR(deviceId: String){
+    val isDisposed = hrDisposable?.isDisposed ?: true
+    if (isDisposed) {
+        hrDisposable = api.startHrStreaming(deviceId)
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe(
+                { hrData: PolarHrData ->
+                    for (sample in hrData.samples) {
+                        Log.d(TAG, "HR     bpm: ${sample.hr} rrs: ${sample.rrsMs} rrAvailable: ${sample.rrAvailable} contactStatus: ${sample.contactStatus} contactStatusSupported: ${sample.contactStatusSupported}")
+                    }
+                },
+                { error: Throwable ->
+                    Log.e(TAG, "HR stream failed. Reason $error")
+                },
+                { Log.d(TAG, "HR stream complete") }
+            )
+    } else {
+        // NOTE dispose will stop streaming if it is "running"
+        hrDisposable?.dispose()
     }
-    return index
 }
 
-private fun subscribeToPolarACC(deviceIDforFunc: String, api: PolarBleApi, printLogCat: Boolean) {
+
+private fun subscribeToPolarACC(deviceId: String){
+    val isDisposed = accDisposable?.isDisposed ?: true
+    if (isDisposed) {
+        accDisposable = requestStreamSettings(deviceId, PolarBleApi.PolarDeviceDataType.ACC)
+            .flatMap { settings: PolarSensorSetting ->
+                api.startAccStreaming(deviceId, settings)
+            }
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe(
+                { polarAccelerometerData: PolarAccelerometerData ->
+                    for (data in polarAccelerometerData.samples) {
+                        Log.d(TAG, "ACC    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
+                    }
+                },
+                { error: Throwable ->
+                    Log.e(TAG, "ACC stream failed. Reason $error")
+                },
+                {
+                    Log.d(TAG, "ACC stream complete")
+                }
+            )
+    } else {
+        // NOTE dispose will stop streaming if it is "running"
+        accDisposable?.dispose()
+    }
+}
+
+private fun subscribeToPolarACCOld(deviceIDforFunc: String, api: PolarBleApi, printLogCat: Boolean) {
     val accSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
         EnumMap(PolarSensorSetting.SettingType::class.java)
     accSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] = 52
