@@ -30,7 +30,6 @@ private var ppgDisposable: Disposable? = null
 private var hrDisposable: Disposable? = null
 
 data class FirstTimeStamps(val sensorID: String) {
-    var phoneTimeStamp: Long = 0L
     var sensorTimeStamp: Long = 0L
 }
 
@@ -38,18 +37,12 @@ fun getPolarDeviceIDFromName(name: String): String {
     return name.takeLast(8)  //Consider improving, especially if other polar device ID's are diff
 }
 
-private lateinit var hRFileName: File
-private lateinit var aCCFileName: File
-private lateinit var gYRFileName: File
-private lateinit var mAGFileName: File
-private lateinit var pPGFileName: File
-private lateinit var eCGFileName: File
 var firstTimeStamps: MutableList<FirstTimeStamps> = ArrayList()
 
 fun saveToLogFiles(saveToFiles: Boolean) {
     saveToLogFiles = saveToFiles
 }
-//Last I looked it was having a hard time connectiong to either the ACC or PPG stream. Maybe low sensor power?
+
 fun subscribeToAllPolarData(deviceIdArray: List<String>) {
     val isDisposed = dcDisposable?.isDisposed ?: true
     if (isDisposed) {
