@@ -122,11 +122,9 @@ class MainActivity : ComponentActivity() {
 
         private var request: LocationRequest
         private var locationClient: FusedLocationProviderClient
-        private var locationFile: File = generateNewFile("LocationData.txt")
 
         init {
             // getting the location client
-            locationFile.appendText("TimeStamp; Latitude; Longitude; Altitude; \n")
             locationClient = LocationServices.getFusedLocationProviderClient(context)
             request = createRequest()
         }
@@ -157,7 +155,8 @@ class MainActivity : ComponentActivity() {
             }else{
                 timeStamp = 0L
             }
-            locationFile.appendText("$timeStamp; ${location.lastLocation!!.latitude}; ${location.lastLocation!!.longitude}; ${location.lastLocation!!.altitude} \n")
+            val fileString = "$timeStamp; ${location.lastLocation!!.latitude}; ${location.lastLocation!!.longitude}; ${location.lastLocation!!.altitude} \n"
+            generateAndAppend("LocationData.txt",fileString,"TimeStamp; Latitude; Longitude; Altitude; \n")
         }
 
         override fun onLocationAvailability(availability: LocationAvailability) {

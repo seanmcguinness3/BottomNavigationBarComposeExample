@@ -5,16 +5,12 @@ import android.bluetooth.*
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.content.Context
-import android.os.Build
 import android.util.Log
 import android.widget.Toast
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.MaterialTheme
@@ -37,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import java.io.File
-import kotlin.concurrent.thread
 import kotlin.time.Duration.Companion.seconds
 
 public const val emptyPolarIDListString = "No Connected ID's"
@@ -82,7 +77,7 @@ fun HomeScreen() {
                             subscribeToVOMaster(voMaster, context = context)
                         }
                         saveToLogFiles(true)
-                        subscribeToAllPolarData(polarDeviceIdListForConnection.toList(), api, false)
+                        subscribeToAllPolarData(polarDeviceIdListForConnection.toList())
                         bleStreamsStarted = true
                     }
                 }) {

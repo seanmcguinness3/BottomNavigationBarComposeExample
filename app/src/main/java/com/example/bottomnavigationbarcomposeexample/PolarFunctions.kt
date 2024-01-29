@@ -1,18 +1,10 @@
 package com.example.bottomnavigationbarcomposeexample
 
-import android.app.Activity
-import android.content.Context
 import android.util.Log
-import android.widget.RadioGroup
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.disposables.Disposable
-import java.util.Calendar
-import java.util.Date
 import com.polar.sdk.api.PolarBleApi
-import com.polar.sdk.api.PolarBleApiCallback
-import com.polar.sdk.api.PolarBleApiDefaultImpl
 import com.polar.sdk.api.model.PolarAccelerometerData
-import com.polar.sdk.api.model.PolarDeviceInfo
 import com.polar.sdk.api.model.PolarEcgData
 import com.polar.sdk.api.model.PolarGyroData
 import com.polar.sdk.api.model.PolarHrData
@@ -25,7 +17,6 @@ import io.reactivex.rxjava3.core.SingleEmitter
 import io.reactivex.rxjava3.schedulers.Schedulers
 import java.io.File
 import java.util.EnumMap
-import java.util.UUID
 
 private const val TAG = "IDK"
 private var saveToLogFiles = false
@@ -59,14 +50,15 @@ fun saveToLogFiles(saveToFiles: Boolean) {
     saveToLogFiles = saveToFiles
 }
 //Last I looked it was having a hard time connectiong to either the ACC or PPG stream. Maybe low sensor power?
-fun subscribeToAllPolarData(deviceIdArray: List<String>, api: PolarBleApi, printLogCat: Boolean) {
+fun subscribeToAllPolarData(deviceIdArray: List<String>) {
     val isDisposed = dcDisposable?.isDisposed ?: true
     if (isDisposed) {
         for (deviceId in deviceIdArray) {
-            Log.d(TAG, "Subscribe to polar device $deviceId called")
             if (deviceId == emptyPolarIDListString) {
                 Log.d(TAG,"Polar device list was empty")
                 return //If there's no polar devices, don't run any of this
+            } else {
+                Log.d(TAG, "Subscribe to polar device $deviceId called")
             }
             var timeStampInfo = FirstTimeStamps(deviceId)
             firstTimeStamps.add(timeStampInfo)
@@ -75,22 +67,8 @@ fun subscribeToAllPolarData(deviceIdArray: List<String>, api: PolarBleApi, print
             subscribeToPolarGYR(deviceId)
             subscribeToPolarMAG(deviceId)
             subscribeToPolarPPG(deviceId)
-            subscribeToPolarECG(deviceId)
-
-            hRFileName = generateNewFile("$deviceId-HRData.txt")
-            aCCFileName = generateNewFile("$deviceId-ACCData.txt")
-            gYRFileName = generateNewFile("$deviceId-GYRData.txt")
-            mAGFileName = generateNewFile("$deviceId-MAGData.txt")
-            pPGFileName = generateNewFile("$deviceId-PPGData.txt")
-            eCGFileName = generateNewFile("$deviceId-ECGData.txt")
-
-            hRFileName.appendText("Phone timestamp;HR [bpm] \n")
-            aCCFileName.appendText("Phone timestamp;sensor timestamp [ns];X [mg];Y [mg];Z [mg] \n")
-            gYRFileName.appendText("Phone timestamp;sensor timestamp [ns];X [dps];Y [dps];Z [dps] \n")
-            mAGFileName.appendText("Phone timestamp;sensor timestamp [ns];X [G];Y [G];Z [G] \n")
-            pPGFileName.appendText("Phone timestamp;sensor timestamp [ns];channel 0;channel 1;channel 2;ambient \n")
-            eCGFileName.appendText("Phone timestamp;sensor timestamp [ns];voltage \n")
-
+            //subscribeToPolarECG(deviceId) //Seems like this causes the ACC stream to fail. Probably an API bug.
+            //I'm going to hardcode logic into what sensors run what subscribes based on their ID's.
         }
 
     } else {
@@ -108,41 +86,21 @@ fun getDeviceIndexInTimestampArray(deviceIDforFunc: String): Int {
     return index
 }
 
-private fun subscribeToPolarHROld(deviceIDforFunc: String, api: PolarBleApi, printLogCat: Boolean) {
-
-    var newDisposable: Disposable = //LOOK INTO NOT NEEDING THIS
-        api.startHrStreaming(deviceIDforFunc)
-            .observeOn(Schedulers.io())
-            .subscribe({ hrData: PolarHrData ->
-                val deviceIdx = getDeviceIndexInTimestampArray(deviceIDforFunc)
-                for (sample in hrData.samples) {
-                    val adjustedPhoneTimeStamp =
-                        System.currentTimeMillis() - firstPhoneTimeStamp
-                    val logString =
-                        "$deviceIDforFunc HR bpm: ${sample.hr} rrs: ${sample.rrsMs} rrAvailable: ${sample.rrAvailable} contactStatus: ${sample.contactStatus} contactStatusSupported: ${sample.contactStatusSupported}"
-                    Log.d(TAG, logString) //printing no matter what
-                    val fileString = "${adjustedPhoneTimeStamp};${sample.hr} \n"
-                    val file =
-                        File("${getSaveFolder().absolutePath}/$deviceIDforFunc-HRData.txt")
-                    if (saveToLogFiles) {
-                        file.appendText(fileString)
-                    }
-                }
-            }, { error: Throwable ->
-                Log.e(TAG, "HR stream failed. Reason $error")
-            }, { Log.d(TAG, "HR stream complete") })
-}
-
 private fun subscribeToPolarHR(deviceId: String){
+    val header = "Phone timestamp;HR [bpm] \n"
     val isDisposed = hrDisposable?.isDisposed ?: true
     if (isDisposed) {
         hrDisposable = api.startHrStreaming(deviceId)
-            .observeOn(AndroidSchedulers.mainThread())
+            .observeOn(Schedulers.io())
             .subscribe(
                 { hrData: PolarHrData ->
                     for (sample in hrData.samples) {
-                        Log.d(TAG, "HR     bpm: ${sample.hr} rrs: ${sample.rrsMs} rrAvailable: ${sample.rrAvailable} contactStatus: ${sample.contactStatus} contactStatusSupported: ${sample.contactStatusSupported}")
+                        val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
+                        val fileString = "${adjustedPhoneTimeStamp};${sample.hr} \n"
+                        if (saveToLogFiles) { generateAndAppend("$deviceId-HRData.txt", fileString, header)}
+                        //Log.d(TAG, "HR     bpm: ${sample.hr} rrs: ${sample.rrsMs} rrAvailable: ${sample.rrAvailable} contactStatus: ${sample.contactStatus} contactStatusSupported: ${sample.contactStatusSupported}")
                     }
+                    Log.d("", "HR running on ${Thread.currentThread().name}")
                 },
                 { error: Throwable ->
                     Log.e(TAG, "HR stream failed. Reason $error")
@@ -155,20 +113,26 @@ private fun subscribeToPolarHR(deviceId: String){
     }
 }
 
-
 private fun subscribeToPolarACC(deviceId: String){
+    val header = "Phone timestamp;sensor timestamp [ns];X [mg];Y [mg];Z [mg] \n"
     val isDisposed = accDisposable?.isDisposed ?: true
     if (isDisposed) {
         accDisposable = requestStreamSettings(deviceId, PolarBleApi.PolarDeviceDataType.ACC)
             .flatMap { settings: PolarSensorSetting ->
                 api.startAccStreaming(deviceId, settings)
             }
-            .observeOn(AndroidSchedulers.mainThread())
+            .observeOn(Schedulers.io())
             .subscribe(
                 { polarAccelerometerData: PolarAccelerometerData ->
+                    val deviceIdx = getDeviceIndexInTimestampArray(deviceId)
                     for (data in polarAccelerometerData.samples) {
-                        Log.d(TAG, "ACC    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
+                        val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
+                        val adjustedSensorTimeStamp = data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
+                        val fileString = "${adjustedPhoneTimeStamp};${adjustedSensorTimeStamp};${data.x};${data.y};${data.z}; \n"
+                        if (saveToLogFiles) { generateAndAppend("$deviceId-ACCData.txt", fileString, header)}
+                        //Log.d(TAG, "ACC    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
                     }
+                    Log.d("", "ACC running on ${Thread.currentThread().name}")
                 },
                 { error: Throwable ->
                     Log.e(TAG, "ACC stream failed. Reason $error")
@@ -183,50 +147,8 @@ private fun subscribeToPolarACC(deviceId: String){
     }
 }
 
-private fun subscribeToPolarACCOld(deviceIDforFunc: String, api: PolarBleApi, printLogCat: Boolean) {
-    val accSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
-        EnumMap(PolarSensorSetting.SettingType::class.java)
-    accSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] = 52
-    accSettingsMap[PolarSensorSetting.SettingType.RESOLUTION] = 16
-    accSettingsMap[PolarSensorSetting.SettingType.RANGE] = 8
-    accSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 3
-    val accSettings = PolarSensorSetting(accSettingsMap)
-    accDisposable = api.startAccStreaming(deviceIDforFunc, accSettings)
-        .observeOn(Schedulers.io())
-        .subscribe({ accData: PolarAccelerometerData ->
-            val deviceIdx =
-                getDeviceIndexInTimestampArray(deviceIDforFunc) //probably look for a refactor here
-            //the whole point is to save the first time stamps so I can start at zero
-            for (data in accData.samples) {
-                if (firstTimeStamps[deviceIdx].sensorTimeStamp == 0L) {      //if the first timestamp hasn't been set (still zero) then set it
-                    val elapsedTime = System.currentTimeMillis() - firstPhoneTimeStamp //use elapsed time to account for time diff in sensor connection
-                    firstTimeStamps[deviceIdx].sensorTimeStamp = (data.timeStamp - (elapsedTime * 1e6)).toLong()
-                    Log.d("","Elapsed time for $deviceIDforFunc: $elapsedTime. time stamp index: $deviceIdx")
-                    firstTimeStamps[deviceIdx].phoneTimeStamp = System.currentTimeMillis() //won't be necessary soon
-                }
-                val adjustedPhoneTimeStamp =
-                    System.currentTimeMillis() - firstPhoneTimeStamp
-                val adjustedSensorTimeStamp =
-                    data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
-                val logString =
-                    "$deviceIDforFunc ACC    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: $adjustedSensorTimeStamp"
-                val file = File("${getSaveFolder().absolutePath}/$deviceIDforFunc-ACCData.txt")
-                val fileString =
-                    "${adjustedPhoneTimeStamp};${adjustedSensorTimeStamp};${data.x};${data.y};${data.z}; \n"
-                if (saveToLogFiles) {
-                    file.appendText(fileString)
-                }
-                if (printLogCat) {
-                    Log.d(TAG, logString)
-                }
-            }
-        }, { error: Throwable ->
-            Log.e(TAG, "Acc stream failed because $error")
-        }, { Log.d(TAG, "acc stream complete") })
-}
-
-
 private fun subscribeToPolarGYR(deviceId: String) {
+    val header = "Phone timestamp;sensor timestamp [ns];X [dps];Y [dps];Z [dps] \n"
     val isDisposed = gyrDisposable?.isDisposed ?: true
     if (isDisposed) {
         gyrDisposable =
@@ -234,12 +156,18 @@ private fun subscribeToPolarGYR(deviceId: String) {
                 .flatMap { settings: PolarSensorSetting ->
                     api.startGyroStreaming(deviceId, settings)
                 }
-                .observeOn(AndroidSchedulers.mainThread())
+                .observeOn(Schedulers.io())
                 .subscribe(
                     { polarGyroData: PolarGyroData ->
+                        val deviceIdx = getDeviceIndexInTimestampArray(deviceId)
                         for (data in polarGyroData.samples) {
-                            Log.d(TAG, "GYR    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
+                            val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
+                            val adjustedSensorTimeStamp = data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
+                            val fileString = "${adjustedPhoneTimeStamp};${adjustedSensorTimeStamp};${data.x};${data.y};${data.z}; \n"
+                            if (saveToLogFiles) { generateAndAppend("$deviceId-GYRData.txt", fileString, header)}
+                            //Log.d(TAG, "GYR    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
                         }
+                        Log.d("", "GYR running on ${Thread.currentThread().name}")
                     },
                     { error: Throwable ->
                         Log.e(TAG, "GYR stream failed. Reason $error")
@@ -252,7 +180,9 @@ private fun subscribeToPolarGYR(deviceId: String) {
     }
 
 }
+
 private fun subscribeToPolarMAG(deviceId: String){
+    val header = "Phone timestamp;sensor timestamp [ns];X [G];Y [G];Z [G] \n"
     val isDisposed = magDisposable?.isDisposed ?: true
     if (isDisposed) {
         magDisposable =
@@ -260,12 +190,18 @@ private fun subscribeToPolarMAG(deviceId: String){
                 .flatMap { settings: PolarSensorSetting ->
                     api.startMagnetometerStreaming(deviceId, settings)
                 }
-                .observeOn(AndroidSchedulers.mainThread())
+                .observeOn(Schedulers.io())
                 .subscribe(
                     { polarMagData: PolarMagnetometerData ->
+                        val deviceIdx = getDeviceIndexInTimestampArray(deviceId)
                         for (data in polarMagData.samples) {
-                            Log.d(TAG, "MAG    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
+                            val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
+                            val adjustedSensorTimeStamp = data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
+                            val fileString = "${adjustedPhoneTimeStamp};${adjustedSensorTimeStamp};${data.x};${data.y};${data.z}; \n"
+                            if (saveToLogFiles) { generateAndAppend("$deviceId-MAGData.txt", fileString, header)}
+                            //Log.d(TAG, "MAG    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
                         }
+                        Log.d("", "MAG running on ${Thread.currentThread().name}")
                     },
                     { error: Throwable ->
                         Log.e(TAG, "MAGNETOMETER stream failed. Reason $error")
@@ -279,6 +215,7 @@ private fun subscribeToPolarMAG(deviceId: String){
 }
 
 private fun subscribeToPolarPPG(deviceId: String) {
+    val header = "Phone timestamp;sensor timestamp [ns];channel 0;channel 1;channel 2;ambient \n"
     val isDisposed = ppgDisposable?.isDisposed ?: true
     if (isDisposed) {
         ppgDisposable =
@@ -286,6 +223,7 @@ private fun subscribeToPolarPPG(deviceId: String) {
                 .flatMap { settings: PolarSensorSetting ->
                     api.startPpgStreaming(deviceId, settings)
                 }
+                //.observeOn(Schedulers.io())
                 .subscribe(
                     { polarPpgData: PolarPpgData ->
                         val deviceIdx = getDeviceIndexInTimestampArray(deviceId)
@@ -294,9 +232,9 @@ private fun subscribeToPolarPPG(deviceId: String) {
                                 val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
                                 val adjustedSensorTimeStamp = data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
                                 val fileString = "${adjustedPhoneTimeStamp};${adjustedSensorTimeStamp};${data.channelSamples[0]};${data.channelSamples[1]};${data.channelSamples[2]};${data.channelSamples[3]} \n"
-                                val file = File("${getSaveFolder().absolutePath}/$deviceId-PPGData.txt")
-                                if (saveToLogFiles) { file.appendText(fileString) }
+                                if (saveToLogFiles) { generateAndAppend("$deviceId-PPGData.txt", fileString, header) }
                             }
+                            Log.d("", "PPG running on ${Thread.currentThread().name}")
                         }
                     },
                     { error: Throwable ->
@@ -311,17 +249,25 @@ private fun subscribeToPolarPPG(deviceId: String) {
 }
 
 private fun subscribeToPolarECG(deviceId: String){
+    val header = "Phone timestamp;sensor timestamp [ns];voltage \n"
     val isDisposed = ecgDisposable?.isDisposed ?: true
     if (isDisposed) {
         ecgDisposable = requestStreamSettings(deviceId, PolarBleApi.PolarDeviceDataType.ECG)
             .flatMap { settings: PolarSensorSetting ->
                 api.startEcgStreaming(deviceId, settings)
             }
+            //.observeOn(Schedulers.io())
             .subscribe(
                 { polarEcgData: PolarEcgData ->
+                    val deviceIdx = getDeviceIndexInTimestampArray(deviceId)
                     for (data in polarEcgData.samples) {
-                        Log.d(TAG, "    yV: ${data.voltage} timeStamp: ${data.timeStamp}")
+                        val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
+                        val adjustedSensorTimeStamp = data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
+                        val fileString = "${adjustedPhoneTimeStamp};${adjustedSensorTimeStamp};${data.voltage}; \n"
+                        if (saveToLogFiles) { generateAndAppend("$deviceId-ECGData.txt", fileString, header) }
+                        //Log.d(TAG, "    yV: ${data.voltage} timeStamp: ${data.timeStamp}")
                     }
+                    Log.d("", "ECG running on ${Thread.currentThread().name}")
                 },
                 { error: Throwable ->
                     Log.e(TAG, "ECG stream failed. Reason $error")
@@ -350,14 +296,14 @@ fun requestStreamSettings(identifier: String, feature: PolarBleApi.PolarDeviceDa
             return@zip android.util.Pair(available, all)
         }
     }
-        .observeOn(AndroidSchedulers.mainThread())
+        .observeOn(Schedulers.io())
         .toFlowable()
         .flatMap { sensorSettings: android.util.Pair<PolarSensorSetting, PolarSensorSetting> ->
-            showAllSettingsDialogNew(sensorSettings.first.settings).toFlowable()
+            setAllSettings(sensorSettings.first.settings).toFlowable()
         }
 }
 
-fun showAllSettingsDialogNew(available: Map<PolarSensorSetting.SettingType, Set<Int>>): Single<PolarSensorSetting> {
+fun setAllSettings(available: Map<PolarSensorSetting.SettingType, Set<Int>>): Single<PolarSensorSetting> {
     return Single.create { e: SingleEmitter<PolarSensorSetting> ->
         val selected: MutableMap<PolarSensorSetting.SettingType, Int> = EnumMap(
             PolarSensorSetting.SettingType::class.java)

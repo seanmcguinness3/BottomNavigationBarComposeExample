@@ -13,3 +13,12 @@ public fun generateNewFile(fileName: String): File {
     file.createNewFile()
     return file
 }
+
+fun generateAndAppend(fileName: String, text: String, header: String = ""){
+    val file = File("${getSaveFolder().absolutePath}/$fileName")
+    if (!file.exists()){
+        file.createNewFile()
+        file.appendText(header)
+    }
+    file.appendText(text = text)
+}
