@@ -48,24 +48,46 @@ fun subscribeToAllPolarData(deviceIdArray: List<String>) {
     if (isDisposed) {
         for (deviceId in deviceIdArray) {
             if (deviceId == emptyPolarIDListString) {
-                Log.d(TAG,"Polar device list was empty")
+                Log.d(TAG, "Polar device list was empty")
                 return //If there's no polar devices, don't run any of this
             } else {
                 Log.d(TAG, "Subscribe to polar device $deviceId called")
             }
             var timeStampInfo = FirstTimeStamps(deviceId)
             firstTimeStamps.add(timeStampInfo)
-            subscribeToPolarHR(deviceId)
-            subscribeToPolarACC(deviceId)
-            subscribeToPolarGYR(deviceId)
-            subscribeToPolarMAG(deviceId)
-            subscribeToPolarPPG(deviceId)
-            //subscribeToPolarECG(deviceId) //Seems like this causes the ACC stream to fail. Probably an API bug.
-            //I'm going to hardcode logic into what sensors run what subscribes based on their ID's.
+            val deviceType = getDeviceType(deviceId)
+            Log.d("", "Subscribing to $deviceType sensor")
+            //Trying to subscribe to unavailable streams was causing unpredictability
+            //specifically, trying to subscribe to ECG with the pucks was causing the ACC to fail
+            if (deviceType == "Chest") {
+                subscribeToPolarHR(deviceId)
+                subscribeToPolarACC(deviceId)
+                subscribeToPolarECG(deviceId)
+            } else {
+                subscribeToPolarHR(deviceId)
+                subscribeToPolarACC(deviceId)
+                subscribeToPolarGYR(deviceId)
+                subscribeToPolarMAG(deviceId)
+                subscribeToPolarPPG(deviceId)
+            }
         }
 
     } else {
         dcDisposable?.dispose()
+    }
+}
+
+fun getDeviceType(deviceId: String): String { //I marked the physical sensors with letters corresponding to their type
+    return if (deviceId == "C19E1A21") {
+        "Head"
+    } else if (deviceId == "C929ED29") {
+        "Wrist"
+    } else if (deviceId == "C929A121") {
+        "Ankle"
+    } else if (deviceId == "CA98A82D") {
+        "Chest"
+    } else {
+        "Unknown"
     }
 }
 
@@ -79,7 +101,7 @@ fun getDeviceIndexInTimestampArray(deviceIDforFunc: String): Int {
     return index
 }
 
-private fun subscribeToPolarHR(deviceId: String){
+private fun subscribeToPolarHR(deviceId: String) {
     val header = "Phone timestamp;HR [bpm] \n"
     val isDisposed = hrDisposable?.isDisposed ?: true
     if (isDisposed) {
@@ -88,9 +110,12 @@ private fun subscribeToPolarHR(deviceId: String){
             .subscribe(
                 { hrData: PolarHrData ->
                     for (sample in hrData.samples) {
-                        val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
+                        val adjustedPhoneTimeStamp =
+                            System.currentTimeMillis() - firstPhoneTimeStamp
                         val fileString = "${adjustedPhoneTimeStamp};${sample.hr} \n"
-                        if (saveToLogFiles) { generateAndAppend("$deviceId-HRData.txt", fileString, header)}
+                        if (saveToLogFiles) {
+                            generateAndAppend("$deviceId-HRData.txt", fileString, header, getDeviceType(deviceId))
+                        }
                         //Log.d(TAG, "HR     bpm: ${sample.hr} rrs: ${sample.rrsMs} rrAvailable: ${sample.rrAvailable} contactStatus: ${sample.contactStatus} contactStatusSupported: ${sample.contactStatusSupported}")
                     }
                     Log.d("", "HR running on ${Thread.currentThread().name}")
@@ -106,7 +131,7 @@ private fun subscribeToPolarHR(deviceId: String){
     }
 }
 
-private fun subscribeToPolarACC(deviceId: String){
+private fun subscribeToPolarACC(deviceId: String) {
     val header = "Phone timestamp;sensor timestamp [ns];X [mg];Y [mg];Z [mg] \n"
     val isDisposed = accDisposable?.isDisposed ?: true
     if (isDisposed) {
@@ -119,10 +144,16 @@ private fun subscribeToPolarACC(deviceId: String){
                 { polarAccelerometerData: PolarAccelerometerData ->
                     val deviceIdx = getDeviceIndexInTimestampArray(deviceId)
                     for (data in polarAccelerometerData.samples) {
+                        if (firstTimeStamps[deviceIdx].sensorTimeStamp == 0L) {      //if the first timestamp hasn't been set (still zero) then set it
+                            val elapsedTime = System.currentTimeMillis() - firstPhoneTimeStamp //use elapsed time to account for time diff in sensor connection
+                            firstTimeStamps[deviceIdx].sensorTimeStamp = (data.timeStamp - (elapsedTime * 1e6)).toLong()
+                            Log.d("", "Elapsed time for $deviceId: $elapsedTime. time stamp index: $deviceIdx")
+                        }
                         val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
                         val adjustedSensorTimeStamp = data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
                         val fileString = "${adjustedPhoneTimeStamp};${adjustedSensorTimeStamp};${data.x};${data.y};${data.z}; \n"
-                        if (saveToLogFiles) { generateAndAppend("$deviceId-ACCData.txt", fileString, header)}
+                        if (saveToLogFiles) { generateAndAppend("$deviceId-ACCData.txt", fileString, header, getDeviceType(deviceId))
+                        }
                         //Log.d(TAG, "ACC    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
                     }
                     Log.d("", "ACC running on ${Thread.currentThread().name}")
@@ -157,7 +188,7 @@ private fun subscribeToPolarGYR(deviceId: String) {
                             val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
                             val adjustedSensorTimeStamp = data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
                             val fileString = "${adjustedPhoneTimeStamp};${adjustedSensorTimeStamp};${data.x};${data.y};${data.z}; \n"
-                            if (saveToLogFiles) { generateAndAppend("$deviceId-GYRData.txt", fileString, header)}
+                            if (saveToLogFiles) { generateAndAppend("$deviceId-GYRData.txt", fileString, header, getDeviceType(deviceId)) }
                             //Log.d(TAG, "GYR    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
                         }
                         Log.d("", "GYR running on ${Thread.currentThread().name}")
@@ -174,7 +205,7 @@ private fun subscribeToPolarGYR(deviceId: String) {
 
 }
 
-private fun subscribeToPolarMAG(deviceId: String){
+private fun subscribeToPolarMAG(deviceId: String) {
     val header = "Phone timestamp;sensor timestamp [ns];X [G];Y [G];Z [G] \n"
     val isDisposed = magDisposable?.isDisposed ?: true
     if (isDisposed) {
@@ -191,7 +222,7 @@ private fun subscribeToPolarMAG(deviceId: String){
                             val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
                             val adjustedSensorTimeStamp = data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
                             val fileString = "${adjustedPhoneTimeStamp};${adjustedSensorTimeStamp};${data.x};${data.y};${data.z}; \n"
-                            if (saveToLogFiles) { generateAndAppend("$deviceId-MAGData.txt", fileString, header)}
+                            if (saveToLogFiles) { generateAndAppend("$deviceId-MAGData.txt", fileString, header, getDeviceType(deviceId)) }
                             //Log.d(TAG, "MAG    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
                         }
                         Log.d("", "MAG running on ${Thread.currentThread().name}")
@@ -225,7 +256,7 @@ private fun subscribeToPolarPPG(deviceId: String) {
                                 val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
                                 val adjustedSensorTimeStamp = data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
                                 val fileString = "${adjustedPhoneTimeStamp};${adjustedSensorTimeStamp};${data.channelSamples[0]};${data.channelSamples[1]};${data.channelSamples[2]};${data.channelSamples[3]} \n"
-                                if (saveToLogFiles) { generateAndAppend("$deviceId-PPGData.txt", fileString, header) }
+                                if (saveToLogFiles) { generateAndAppend("$deviceId-PPGData.txt", fileString, header, getDeviceType(deviceId)) }
                             }
                             Log.d("", "PPG running on ${Thread.currentThread().name}")
                         }
@@ -241,7 +272,7 @@ private fun subscribeToPolarPPG(deviceId: String) {
     }
 }
 
-private fun subscribeToPolarECG(deviceId: String){
+private fun subscribeToPolarECG(deviceId: String) {
     val header = "Phone timestamp;sensor timestamp [ns];voltage \n"
     val isDisposed = ecgDisposable?.isDisposed ?: true
     if (isDisposed) {
@@ -257,7 +288,7 @@ private fun subscribeToPolarECG(deviceId: String){
                         val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
                         val adjustedSensorTimeStamp = data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
                         val fileString = "${adjustedPhoneTimeStamp};${adjustedSensorTimeStamp};${data.voltage}; \n"
-                        if (saveToLogFiles) { generateAndAppend("$deviceId-ECGData.txt", fileString, header) }
+                        if (saveToLogFiles) { generateAndAppend("$deviceId-ECGData.txt", fileString, header, getDeviceType(deviceId)) }
                         //Log.d(TAG, "    yV: ${data.voltage} timeStamp: ${data.timeStamp}")
                     }
                     Log.d("", "ECG running on ${Thread.currentThread().name}")
@@ -273,14 +304,23 @@ private fun subscribeToPolarECG(deviceId: String){
     }
 }
 
-fun requestStreamSettings(identifier: String, feature: PolarBleApi.PolarDeviceDataType): Flowable<PolarSensorSetting> {
+fun requestStreamSettings(
+    identifier: String,
+    feature: PolarBleApi.PolarDeviceDataType
+): Flowable<PolarSensorSetting> {
     val availableSettings = api.requestStreamSettings(identifier, feature)
     val allSettings = api.requestFullStreamSettings(identifier, feature)
         .onErrorReturn { error: Throwable ->
-            Log.w(TAG, "Full stream settings are not available for feature $feature. REASON: $error")
+            Log.w(
+                TAG,
+                "Full stream settings are not available for feature $feature. REASON: $error"
+            )
             PolarSensorSetting(emptyMap())
         }
-    return Single.zip(availableSettings, allSettings) { available: PolarSensorSetting, all: PolarSensorSetting ->
+    return Single.zip(
+        availableSettings,
+        allSettings
+    ) { available: PolarSensorSetting, all: PolarSensorSetting ->
         if (available.settings.isEmpty()) {
             throw Throwable("Settings are not available")
         } else {
@@ -299,7 +339,8 @@ fun requestStreamSettings(identifier: String, feature: PolarBleApi.PolarDeviceDa
 fun setAllSettings(available: Map<PolarSensorSetting.SettingType, Set<Int>>): Single<PolarSensorSetting> {
     return Single.create { e: SingleEmitter<PolarSensorSetting> ->
         val selected: MutableMap<PolarSensorSetting.SettingType, Int> = EnumMap(
-            PolarSensorSetting.SettingType::class.java)
+            PolarSensorSetting.SettingType::class.java
+        )
         setSettingToMax(selected, PolarSensorSetting.SettingType.SAMPLE_RATE, available)
         setSettingToMax(selected, PolarSensorSetting.SettingType.RESOLUTION, available)
         setSettingToMax(selected, PolarSensorSetting.SettingType.RANGE, available)
@@ -308,17 +349,21 @@ fun setAllSettings(available: Map<PolarSensorSetting.SettingType, Set<Int>>): Si
     }.subscribeOn(AndroidSchedulers.mainThread())
 }
 
-fun setSettingToMax(selected: MutableMap<PolarSensorSetting.SettingType, Int>, type: PolarSensorSetting.SettingType, availibleSettings: Map<PolarSensorSetting.SettingType, Set<Int>>){
+fun setSettingToMax(
+    selected: MutableMap<PolarSensorSetting.SettingType, Int>,
+    type: PolarSensorSetting.SettingType,
+    availibleSettings: Map<PolarSensorSetting.SettingType, Set<Int>>
+) {
     var maxValue = 0
     val availibleValuesForType = availibleSettings[type]?.toList()
     if (availibleValuesForType != null) {
-        for (i in availibleValuesForType.indices){
-            if (availibleValuesForType[i] > maxValue){
+        for (i in availibleValuesForType.indices) {
+            if (availibleValuesForType[i] > maxValue) {
                 maxValue = availibleValuesForType[i]
-                Log.d("","Found value ${availibleValuesForType[i]} for setting $type")
+                Log.d("", "Found value ${availibleValuesForType[i]} for setting $type")
             }
         }
     }
     selected[type] = maxValue
-    Log.d("","Setting $type was autoset to $maxValue")
+    Log.d("", "Setting $type was autoset to $maxValue")
 }
