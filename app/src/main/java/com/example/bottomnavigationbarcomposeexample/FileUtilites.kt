@@ -19,6 +19,7 @@ fun generateAndAppend(fileName: String, text: String, header: String = "", subFo
     val file = File("${getSaveFolder(subFolder).absolutePath}/$fileName")
 
     if (!file.exists()){
+        Log.d("","Streaming start success for $subFolder - $fileName")
         file.createNewFile()
         file.appendText(header)
     }

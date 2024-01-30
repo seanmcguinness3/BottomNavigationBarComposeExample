@@ -8,15 +8,21 @@ import android.content.Context
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
+import androidx.compose.material.DropdownMenu
+import androidx.compose.material.DropdownMenuItem
+import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedButton
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -31,7 +37,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.time.Duration.Companion.seconds
 
@@ -50,6 +60,7 @@ var firstPhoneTimeStamp = System.currentTimeMillis()
 fun HomeScreen() {
     Log.d("DD", "Home screen composable called")
     var collectingData by remember { mutableStateOf(false) }
+    var dataCollectButtonText by remember { mutableStateOf("Start Data Collection")}
     Column(
         Modifier.fillMaxHeight(),
         verticalArrangement = Arrangement.SpaceBetween
@@ -69,6 +80,7 @@ fun HomeScreen() {
                 ),
                 onClick = {
                     collectingData = !collectingData
+                    dataCollectButtonText = "Starting..."
                     saveToLogFiles(collectingData) //only save to log files when collecting data
                     firstPhoneTimeStamp = System.currentTimeMillis()//this will be the only place phone time stamp gets set
 
@@ -77,11 +89,20 @@ fun HomeScreen() {
                             subscribeToVOMaster(voMaster, context = context)
                         }
                         saveToLogFiles(true)
-                        subscribeToAllPolarData(polarDeviceIdListForConnection.toList())
                         bleStreamsStarted = true
+                        //subscribeToAllPolarData(polarDeviceIdListForConnection.toList())
                     }
                 }) {
-                Text(if (collectingData) "Stop Data Collection" else "Start Data Collection")
+                Text(dataCollectButtonText)
+            }
+            LaunchedEffect(key1 = dataCollectButtonText){
+                if (dataCollectButtonText == "Starting..."){
+                    Log.d("","data collect launched effect called")
+                    subscribeToAllPolarData(polarDeviceIdListForConnection.toList())
+                    delay(15000)  //See if there's a way to get the above function to return an on finished
+                    dataCollectButtonText = "Data Collection Started"
+                }
+
             }
             LazyColumn(modifier = Modifier.padding(vertical = 4.dp))
             {
@@ -91,24 +112,56 @@ fun HomeScreen() {
             }
         }
         //LAP BUTTON
-        Button(modifier = Modifier
-            .padding(horizontal = 20.dp, vertical = 20.dp)
-            .fillMaxWidth(1.0f),
-            colors = ButtonDefaults.buttonColors(
-                backgroundColor = colorResource(id = R.color.colorText),
-                contentColor = colorResource(id = R.color.colorPrimaryDark)
-            ),
-            onClick = {
-                if (!lapTimeFileExists) {
-                    generateNewFile("Lap Times.txt")
-                    lapTimeFileExists = true
+        val list = listOf("Run", "Walk", "Stairs up", "Stairs down")
+        val expanded = remember { mutableStateOf(false) }
+        val currentValue = remember { mutableStateOf(list[0]) }
+        val startText = remember { mutableStateOf("Start") }
+        Row {
+            Button(modifier = Modifier
+                .padding(horizontal = 20.dp, vertical = 20.dp),
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = colorResource(id = R.color.colorText),
+                    contentColor = colorResource(id = R.color.colorPrimaryDark)
+                ),
+                onClick = {
+                    if (!lapTimeFileExists) {
+                        generateNewFile("Lap Times.txt")
+                        lapTimeFileExists = true
+                    }
+                    startText.value = if (startText.value == "Start"){ "End" } else { "Start" }
+                    val file = File("${getSaveFolder().absolutePath}/Lap Times.txt")
+                    val timeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
+                    file.appendText("${startText.value} of ${currentValue.value}: $timeStamp \n")
+                }) {
+                Text("${startText.value} ${currentValue.value}")
+            }
+            Row(modifier = Modifier
+                .padding(horizontal = 20.dp, vertical = 20.dp)
+                .fillMaxWidth()
+                .clickable {
+                    expanded.value = !expanded.value
                 }
-                Toast.makeText(context,"Lap Button Pressed",Toast.LENGTH_SHORT)
-                val file = File("${getSaveFolder().absolutePath}/Lap Times.txt")
-                val timeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
-                file.appendText("Lap Time: $timeStamp \n")
-            }) {
-            Text("Lap Time Stamp")
+                .background(colorResource(id = R.color.colorText))
+            ) {
+                Text(text = currentValue.value)
+                Icon(imageVector = Icons.Filled.ArrowDropDown, contentDescription = null)
+
+                DropdownMenu(expanded = expanded.value, onDismissRequest = {
+                    expanded.value = false
+                }) {
+                    list.forEach {
+                        DropdownMenuItem(onClick = {
+                            currentValue.value = it
+                            expanded.value = false
+                        }) {
+
+                            Text(text = it)
+
+                        }
+                    }
+                }
+
+            }
         }
     }
 }

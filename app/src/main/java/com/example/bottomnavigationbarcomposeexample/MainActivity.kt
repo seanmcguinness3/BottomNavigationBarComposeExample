@@ -79,39 +79,34 @@ class MainActivity : ComponentActivity() {
             }
 
             override fun deviceConnected(polarDeviceInfo: PolarDeviceInfo) {
-                Log.d("","Assass1")
                 Log.d("","use this to trigger ${polarDeviceInfo.deviceId} connected button")
+                //subscribeToAllPolarDataSingle(polarDeviceInfo.deviceId)
             }
 
             override fun bleSdkFeatureReady(identifier: String, feature: PolarBleApi.PolarBleSdkFeature) {
-                Log.d("","Assass2")
-                Log.d("","identifier = $identifier, feature = $feature  not sure if this is gonna do anything")
+
             }
 
             override fun deviceConnecting(polarDeviceInfo: PolarDeviceInfo) {
-                Log.d("","Assass3")
                 //SEE IF WE NEED THIS
             }
 
             override fun deviceDisconnected(polarDeviceInfo: PolarDeviceInfo) {
-                Log.d("","Assass4")
                 //SEE IF WE NEED THIS
             }
 
             override fun disInformationReceived(identifier: String, uuid: UUID, value: String) {
-                Log.d("","Assass5")
                 //SEE IF WE NEED THIS
             }
 
             override fun batteryLevelReceived(identifier: String, level: Int) {
-                Log.d("","Assass6")
                 //SEE IF WE NEED THIS
             }
 
             override fun hrNotificationReceived(identifier: String, data: PolarHrData.PolarHrSample) {
-                Log.d("","Assass7")
             // //SEE IF WE NEED THIS
             }
+
         })
 
         //START THE LOCATION TRACKING
@@ -155,9 +150,6 @@ class MainActivity : ComponentActivity() {
         }
 
         override fun onLocationResult(location: LocationResult) {
-            Log.d("","Location update latitude: ${location.lastLocation!!.latitude}")
-            Log.d("","Location update altitude: ${location.lastLocation!!.altitude}")
-
             var timeStamp = 0L
             if (firstTimeStamps.size >= 1){
                 timeStamp = System.currentTimeMillis() - firstPhoneTimeStamp

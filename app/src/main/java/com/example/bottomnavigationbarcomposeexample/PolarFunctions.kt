@@ -20,7 +20,7 @@ import java.io.File
 import java.util.EnumMap
 
 private const val TAG = "IDK"
-private var saveToLogFiles = false
+private var saveToLogFiles = true
 
 private var dcDisposable: Disposable? = null
 private var ecgDisposable: Disposable? = null
@@ -41,11 +41,43 @@ fun getPolarDeviceIDFromName(name: String): String {
 var firstTimeStamps: MutableList<FirstTimeStamps> = ArrayList()
 
 fun saveToLogFiles(saveToFiles: Boolean) {
-    saveToLogFiles = saveToFiles
+    saveToLogFiles = saveToFiles //this actuall doesn't work I don't think b/c it's called in a subscribe which may or may not get an updated version of thsi variable
+    //it's kinda a dumb variable anyway so get rid of it if you have time/think of something better
+}
+fun subscribeToAllPolarDataSingle(deviceId: String) {
+    val isDisposed = dcDisposable?.isDisposed ?: true
+    if (isDisposed) {
+            if (deviceId == emptyPolarIDListString) {
+                Log.d(TAG, "Polar device list was empty")
+                return //If there's no polar devices, don't run any of this
+            } else {
+                Log.d(TAG, "Subscribe to polar device $deviceId called")
+            }
+            var timeStampInfo = FirstTimeStamps(deviceId)
+            firstTimeStamps.add(timeStampInfo)
+            val deviceType = getDeviceType(deviceId)
+            Log.d("", "Subscribing to $deviceType sensor")
+            //Trying to subscribe to unavailable streams was causing unpredictability
+            //specifically, trying to subscribe to ECG with the pucks was causing the ACC to fail
+            if (deviceType == "Chest") {
+                subscribeToPolarHR(deviceId)
+                subscribeToPolarACC(deviceId)
+                subscribeToPolarECG(deviceId)
+            } else {
+                subscribeToPolarHR(deviceId)
+                subscribeToPolarACC(deviceId)
+                subscribeToPolarGYR(deviceId)
+                subscribeToPolarMAG(deviceId)
+                subscribeToPolarPPG(deviceId)
+            }
+
+    } else {
+        dcDisposable?.dispose()
+    }
 }
 
-
-fun subscribeToAllPolarData(deviceIdArray: List<String>) {
+suspend fun subscribeToAllPolarData(deviceIdArray: List<String>) {
+//fun subscribeToAllPolarData(deviceIdArray: List<String>) {
     val isDisposed = dcDisposable?.isDisposed ?: true
     if (isDisposed) {
         for (deviceId in deviceIdArray) {
@@ -72,10 +104,13 @@ fun subscribeToAllPolarData(deviceIdArray: List<String>) {
                 subscribeToPolarMAG(deviceId)
                 subscribeToPolarPPG(deviceId)
             }
-            //This actually fixed it so just need a non blocking version of this piece
+            //This seems like it works but it actually stops logging
+            //going to re-implement the old version and just hardcode the settings
+            //if it's still a problem, search for a real reactivX solution
+            //I think requesting the settings stops the streams. not sure.
             Log.d("","About to sleep")
-
-            Thread.sleep(5000) //i mean you could try running this on a different thread and keeping the sleep?
+            //Thread.sleep(5000)
+            delay(10000) //this might be about as good as it gets without using a reactive programming setup
             Log.d("","Just Woke")
         }
 
@@ -110,6 +145,7 @@ fun getDeviceIndexInTimestampArray(deviceIDforFunc: String): Int {
 }
 
 private fun subscribeToPolarHR(deviceId: String) {
+    Log.d("", "HR stream for ${getDeviceType(deviceId)} is trying to start ")
     val header = "Phone timestamp;HR [bpm] \n"
     val isDisposed = hrDisposable?.isDisposed ?: true
     if (isDisposed) {
@@ -125,7 +161,6 @@ private fun subscribeToPolarHR(deviceId: String) {
                         }
                         //Log.d(TAG, "HR     bpm: ${sample.hr} rrs: ${sample.rrsMs} rrAvailable: ${sample.rrAvailable} contactStatus: ${sample.contactStatus} contactStatusSupported: ${sample.contactStatusSupported}")
                     }
-                    Log.d("", "HR running on ${Thread.currentThread().name}")
                 },
                 { error: Throwable ->
                     Log.e(TAG, "HR stream failed. Reason $error")
@@ -163,7 +198,7 @@ private fun subscribeToPolarACC(deviceId: String) {
                         }
                         //Log.d(TAG, "ACC    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
                     }
-                    Log.d("", "ACC running on ${Thread.currentThread().name}")
+                    Log.d("","ACC for $deviceId, ${getDeviceType(deviceId)} is running")
                 },
                 { error: Throwable ->
                     Log.e(TAG, "ACC stream failed. Reason $error")
@@ -198,7 +233,6 @@ private fun subscribeToPolarGYR(deviceId: String) {
                             if (saveToLogFiles) { generateAndAppend("$deviceId-GYRData.txt", fileString, header, getDeviceType(deviceId)) }
                             //Log.d(TAG, "GYR    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
                         }
-                        Log.d("", "GYR running on ${Thread.currentThread().name}")
                     },
                     { error: Throwable ->
                         Log.e(TAG, "GYR stream failed. Reason $error")
@@ -232,7 +266,6 @@ private fun subscribeToPolarMAG(deviceId: String) {
                             if (saveToLogFiles) { generateAndAppend("$deviceId-MAGData.txt", fileString, header, getDeviceType(deviceId)) }
                             //Log.d(TAG, "MAG    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
                         }
-                        Log.d("", "MAG running on ${Thread.currentThread().name}")
                     },
                     { error: Throwable ->
                         Log.e(TAG, "MAGNETOMETER stream failed. Reason $error")
@@ -265,7 +298,6 @@ private fun subscribeToPolarPPG(deviceId: String) {
                                 val fileString = "${adjustedPhoneTimeStamp};${adjustedSensorTimeStamp};${data.channelSamples[0]};${data.channelSamples[1]};${data.channelSamples[2]};${data.channelSamples[3]} \n"
                                 if (saveToLogFiles) { generateAndAppend("$deviceId-PPGData.txt", fileString, header, getDeviceType(deviceId)) }
                             }
-                            Log.d("", "PPG running on ${Thread.currentThread().name}")
                         }
                     },
                     { error: Throwable ->
@@ -298,7 +330,6 @@ private fun subscribeToPolarECG(deviceId: String) {
                         if (saveToLogFiles) { generateAndAppend("$deviceId-ECGData.txt", fileString, header, getDeviceType(deviceId)) }
                         //Log.d(TAG, "    yV: ${data.voltage} timeStamp: ${data.timeStamp}")
                     }
-                    Log.d("", "ECG running on ${Thread.currentThread().name}")
                 },
                 { error: Throwable ->
                     Log.e(TAG, "ECG stream failed. Reason $error")
