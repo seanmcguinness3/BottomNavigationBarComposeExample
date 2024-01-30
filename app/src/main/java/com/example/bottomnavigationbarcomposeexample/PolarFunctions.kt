@@ -15,6 +15,7 @@ import io.reactivex.rxjava3.core.Flowable
 import io.reactivex.rxjava3.core.Single
 import io.reactivex.rxjava3.core.SingleEmitter
 import io.reactivex.rxjava3.schedulers.Schedulers
+import kotlinx.coroutines.delay
 import java.io.File
 import java.util.EnumMap
 
@@ -43,6 +44,7 @@ fun saveToLogFiles(saveToFiles: Boolean) {
     saveToLogFiles = saveToFiles
 }
 
+
 fun subscribeToAllPolarData(deviceIdArray: List<String>) {
     val isDisposed = dcDisposable?.isDisposed ?: true
     if (isDisposed) {
@@ -70,12 +72,18 @@ fun subscribeToAllPolarData(deviceIdArray: List<String>) {
                 subscribeToPolarMAG(deviceId)
                 subscribeToPolarPPG(deviceId)
             }
+            //This actually fixed it so just need a non blocking version of this piece
+            Log.d("","About to sleep")
+
+            Thread.sleep(5000)
+            Log.d("","Just Woke")
         }
 
     } else {
         dcDisposable?.dispose()
     }
 }
+
 
 fun getDeviceType(deviceId: String): String { //I marked the physical sensors with letters corresponding to their type
     return if (deviceId == "C19E1A21") {
@@ -110,8 +118,7 @@ private fun subscribeToPolarHR(deviceId: String) {
             .subscribe(
                 { hrData: PolarHrData ->
                     for (sample in hrData.samples) {
-                        val adjustedPhoneTimeStamp =
-                            System.currentTimeMillis() - firstPhoneTimeStamp
+                        val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
                         val fileString = "${adjustedPhoneTimeStamp};${sample.hr} \n"
                         if (saveToLogFiles) {
                             generateAndAppend("$deviceId-HRData.txt", fileString, header, getDeviceType(deviceId))
@@ -346,7 +353,7 @@ fun setAllSettings(available: Map<PolarSensorSetting.SettingType, Set<Int>>): Si
         setSettingToMax(selected, PolarSensorSetting.SettingType.RANGE, available)
         setSettingToMax(selected, PolarSensorSetting.SettingType.CHANNELS, available)
         e.onSuccess(PolarSensorSetting(selected))
-    }.subscribeOn(AndroidSchedulers.mainThread())
+    }.subscribeOn(Schedulers.io())
 }
 
 fun setSettingToMax(
