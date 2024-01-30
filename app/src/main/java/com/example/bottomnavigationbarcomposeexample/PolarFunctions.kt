@@ -75,7 +75,7 @@ fun subscribeToAllPolarData(deviceIdArray: List<String>) {
             //This actually fixed it so just need a non blocking version of this piece
             Log.d("","About to sleep")
 
-            Thread.sleep(5000)
+            Thread.sleep(5000) //i mean you could try running this on a different thread and keeping the sleep?
             Log.d("","Just Woke")
         }
 
