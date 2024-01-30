@@ -108,10 +108,10 @@ suspend fun subscribeToAllPolarData(deviceIdArray: List<String>) {
             //going to re-implement the old version and just hardcode the settings
             //if it's still a problem, search for a real reactivX solution
             //I think requesting the settings stops the streams. not sure.
-            Log.d("","About to sleep")
+            //Log.d("","About to sleep")
             //Thread.sleep(5000)
-            delay(10000) //this might be about as good as it gets without using a reactive programming setup
-            Log.d("","Just Woke")
+            //delay(10000) //this might be about as good as it gets without using a reactive programming setup
+            //Log.d("","Just Woke")
         }
 
     } else {
@@ -174,13 +174,17 @@ private fun subscribeToPolarHR(deviceId: String) {
 }
 
 private fun subscribeToPolarACC(deviceId: String) {
+    val accSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
+        EnumMap(PolarSensorSetting.SettingType::class.java)
+    accSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] = 52
+    accSettingsMap[PolarSensorSetting.SettingType.RESOLUTION] = 16
+    accSettingsMap[PolarSensorSetting.SettingType.RANGE] = 8
+    accSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 3
+    val accSettings = PolarSensorSetting(accSettingsMap)
     val header = "Phone timestamp;sensor timestamp [ns];X [mg];Y [mg];Z [mg] \n"
     val isDisposed = accDisposable?.isDisposed ?: true
     if (isDisposed) {
-        accDisposable = requestStreamSettings(deviceId, PolarBleApi.PolarDeviceDataType.ACC)
-            .flatMap { settings: PolarSensorSetting ->
-                api.startAccStreaming(deviceId, settings)
-            }
+        accDisposable = api.startAccStreaming(deviceId,accSettings)
             .observeOn(Schedulers.io())
             .subscribe(
                 { polarAccelerometerData: PolarAccelerometerData ->
@@ -214,14 +218,17 @@ private fun subscribeToPolarACC(deviceId: String) {
 }
 
 private fun subscribeToPolarGYR(deviceId: String) {
+    val gyrSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
+        EnumMap(PolarSensorSetting.SettingType::class.java)
+    gyrSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] = 52
+    gyrSettingsMap[PolarSensorSetting.SettingType.RESOLUTION] = 16
+    gyrSettingsMap[PolarSensorSetting.SettingType.RANGE] = 2000
+    gyrSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 3
+    val gyrSettings = PolarSensorSetting(gyrSettingsMap)
     val header = "Phone timestamp;sensor timestamp [ns];X [dps];Y [dps];Z [dps] \n"
     val isDisposed = gyrDisposable?.isDisposed ?: true
     if (isDisposed) {
-        gyrDisposable =
-            requestStreamSettings(deviceId, PolarBleApi.PolarDeviceDataType.GYRO)
-                .flatMap { settings: PolarSensorSetting ->
-                    api.startGyroStreaming(deviceId, settings)
-                }
+        gyrDisposable = api.startGyroStreaming(deviceId, gyrSettings)
                 .observeOn(Schedulers.io())
                 .subscribe(
                     { polarGyroData: PolarGyroData ->
@@ -247,14 +254,17 @@ private fun subscribeToPolarGYR(deviceId: String) {
 }
 
 private fun subscribeToPolarMAG(deviceId: String) {
+    val magSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
+        EnumMap(PolarSensorSetting.SettingType::class.java)
+    magSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] = 20
+    magSettingsMap[PolarSensorSetting.SettingType.RESOLUTION] = 16
+    magSettingsMap[PolarSensorSetting.SettingType.RANGE] = 50
+    magSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 3
+    val magSettings = PolarSensorSetting(magSettingsMap)
     val header = "Phone timestamp;sensor timestamp [ns];X [G];Y [G];Z [G] \n"
     val isDisposed = magDisposable?.isDisposed ?: true
     if (isDisposed) {
-        magDisposable =
-            requestStreamSettings(deviceId, PolarBleApi.PolarDeviceDataType.MAGNETOMETER)
-                .flatMap { settings: PolarSensorSetting ->
-                    api.startMagnetometerStreaming(deviceId, settings)
-                }
+        magDisposable = api.startMagnetometerStreaming(deviceId, magSettings)
                 .observeOn(Schedulers.io())
                 .subscribe(
                     { polarMagData: PolarMagnetometerData ->
@@ -279,6 +289,12 @@ private fun subscribeToPolarMAG(deviceId: String) {
 }
 
 private fun subscribeToPolarPPG(deviceId: String) {
+    val ppgSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
+        EnumMap(PolarSensorSetting.SettingType::class.java)
+    ppgSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] = 20
+    ppgSettingsMap[PolarSensorSetting.SettingType.RESOLUTION] = 16
+    ppgSettingsMap[PolarSensorSetting.SettingType.RANGE] = 50
+    ppgSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 3
     val header = "Phone timestamp;sensor timestamp [ns];channel 0;channel 1;channel 2;ambient \n"
     val isDisposed = ppgDisposable?.isDisposed ?: true
     if (isDisposed) {
@@ -312,13 +328,15 @@ private fun subscribeToPolarPPG(deviceId: String) {
 }
 
 private fun subscribeToPolarECG(deviceId: String) {
+    val ecgSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
+        EnumMap(PolarSensorSetting.SettingType::class.java)
+    ecgSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] = 130
+    ecgSettingsMap[PolarSensorSetting.SettingType.RESOLUTION] = 14
+    val ecgSettings = PolarSensorSetting(ecgSettingsMap)
     val header = "Phone timestamp;sensor timestamp [ns];voltage \n"
     val isDisposed = ecgDisposable?.isDisposed ?: true
     if (isDisposed) {
-        ecgDisposable = requestStreamSettings(deviceId, PolarBleApi.PolarDeviceDataType.ECG)
-            .flatMap { settings: PolarSensorSetting ->
-                api.startEcgStreaming(deviceId, settings)
-            }
+        ecgDisposable = api.startEcgStreaming(deviceId, ecgSettings)
             //.observeOn(Schedulers.io())
             .subscribe(
                 { polarEcgData: PolarEcgData ->
