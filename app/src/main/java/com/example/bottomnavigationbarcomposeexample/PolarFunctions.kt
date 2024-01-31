@@ -107,8 +107,6 @@ fun getDeviceIndexInTimestampArray(deviceIDforFunc: String): Int {
 private fun subscribeToPolarHR(deviceId: String) {
     Log.d("", "HR stream for ${getDeviceType(deviceId)} is trying to start ")
     val header = "Phone timestamp;HR [bpm] \n"
-    val isDisposed = hrDisposable?.isDisposed ?: true
-    if (isDisposed) {
         hrDisposable = api.startHrStreaming(deviceId)
             .observeOn(Schedulers.io())
             .subscribe(
@@ -127,10 +125,6 @@ private fun subscribeToPolarHR(deviceId: String) {
                 },
                 { Log.d(TAG, "HR stream complete") }
             )
-    } else {
-        // NOTE dispose will stop streaming if it is "running"
-        hrDisposable?.dispose()
-    }
 }
 
 private fun subscribeToPolarACC(deviceId: String) {
@@ -142,8 +136,6 @@ private fun subscribeToPolarACC(deviceId: String) {
     accSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 3
     val accSettings = PolarSensorSetting(accSettingsMap)
     val header = "Phone timestamp;sensor timestamp [ns];X [mg];Y [mg];Z [mg] \n"
-    val isDisposed = accDisposable?.isDisposed ?: true
-    if (isDisposed) {
         accDisposable = api.startAccStreaming(deviceId,accSettings)
             .observeOn(Schedulers.io())
             .subscribe(
@@ -171,10 +163,6 @@ private fun subscribeToPolarACC(deviceId: String) {
                     Log.d(TAG, "ACC stream complete")
                 }
             )
-    } else {
-        // NOTE dispose will stop streaming if it is "running"
-        accDisposable?.dispose()
-    }
 }
 
 private fun subscribeToPolarGYR(deviceId: String) {
@@ -186,8 +174,6 @@ private fun subscribeToPolarGYR(deviceId: String) {
     gyrSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 3
     val gyrSettings = PolarSensorSetting(gyrSettingsMap)
     val header = "Phone timestamp;sensor timestamp [ns];X [dps];Y [dps];Z [dps] \n"
-    val isDisposed = gyrDisposable?.isDisposed ?: true
-    if (isDisposed) {
         gyrDisposable = api.startGyroStreaming(deviceId, gyrSettings)
                 .observeOn(Schedulers.io())
                 .subscribe(
@@ -206,10 +192,6 @@ private fun subscribeToPolarGYR(deviceId: String) {
                     },
                     { Log.d(TAG, "GYR stream complete") }
                 )
-    } else {
-        // NOTE dispose will stop streaming if it is "running"
-        gyrDisposable?.dispose()
-    }
 
 }
 
@@ -222,8 +204,6 @@ private fun subscribeToPolarMAG(deviceId: String) {
     magSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 3
     val magSettings = PolarSensorSetting(magSettingsMap)
     val header = "Phone timestamp;sensor timestamp [ns];X [G];Y [G];Z [G] \n"
-    val isDisposed = magDisposable?.isDisposed ?: true
-    if (isDisposed) {
         magDisposable = api.startMagnetometerStreaming(deviceId, magSettings)
                 .observeOn(Schedulers.io())
                 .subscribe(
@@ -242,10 +222,6 @@ private fun subscribeToPolarMAG(deviceId: String) {
                     },
                     { Log.d(TAG, "MAGNETOMETER stream complete") }
                 )
-    } else {
-        // NOTE dispose will stop streaming if it is "running"
-        magDisposable!!.dispose()
-    }
 }
 
 private fun subscribeToPolarPPG(deviceId: String) {
@@ -260,8 +236,6 @@ private fun subscribeToPolarPPG(deviceId: String) {
     ppgSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 4
     val ppgSettings = PolarSensorSetting(ppgSettingsMap)
     val header = "Phone timestamp;sensor timestamp [ns];channel 0;channel 1;channel 2;ambient \n"
-    val isDisposed = ppgDisposable?.isDisposed ?: true
-    if (isDisposed) {
         ppgDisposable = api.startPpgStreaming(deviceId, ppgSettings)
                 .observeOn(Schedulers.io())
                 .subscribe(
@@ -281,10 +255,6 @@ private fun subscribeToPolarPPG(deviceId: String) {
                     },
                     { Log.d(TAG, "PPG stream complete") }
                 )
-    } else {
-        // NOTE dispose will stop streaming if it is "running"
-        ppgDisposable?.dispose()
-    }
 }
 
 private fun subscribeToPolarECG(deviceId: String) {
@@ -294,8 +264,6 @@ private fun subscribeToPolarECG(deviceId: String) {
     ecgSettingsMap[PolarSensorSetting.SettingType.RESOLUTION] = 14
     val ecgSettings = PolarSensorSetting(ecgSettingsMap)
     val header = "Phone timestamp;sensor timestamp [ns];voltage \n"
-    val isDisposed = ecgDisposable?.isDisposed ?: true
-    if (isDisposed) {
         ecgDisposable = api.startEcgStreaming(deviceId, ecgSettings)
             .observeOn(Schedulers.io())
             .subscribe(
@@ -314,10 +282,6 @@ private fun subscribeToPolarECG(deviceId: String) {
                 },
                 { Log.d(TAG, "ECG stream complete") }
             )
-    } else {
-        // NOTE stops streaming if it is "running"
-        ecgDisposable?.dispose()
-    }
 }
 
 fun requestStreamSettings(
