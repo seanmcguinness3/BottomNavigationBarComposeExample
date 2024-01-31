@@ -70,7 +70,7 @@ fun subscribeToAllPolarData(deviceIdArray: List<String>) {
                 subscribeToPolarACC(deviceId)
                 subscribeToPolarGYR(deviceId)
                 subscribeToPolarMAG(deviceId)
-                //fsubscribeToPolarPPG(deviceId)
+                subscribeToPolarPPG(deviceId)
             }
         }
 
@@ -81,16 +81,11 @@ fun subscribeToAllPolarData(deviceIdArray: List<String>) {
 
 
 fun getDeviceType(deviceId: String): String { //I marked the physical sensors with letters corresponding to their type
-    return if (deviceId == "C19E1A21") {
-        "Head"
-    } else if (deviceId == "C929ED29") {
-        "Wrist"
-    } else if (deviceId == "C929A121") {
-        "Ankle"
-    } else if (deviceId == "CA98A82D") {
-        "Chest"
-    } else {
-        "Unknown"
+    return if (deviceId == "C19E1A21") { "Head"
+    } else if (deviceId == "C929ED29") { "Wrist"
+    } else if (deviceId == "C929A121") { "Ankle"
+    } else if (deviceId == "CA98A82D") { "Chest"
+    } else { "Unknown"
     }
 }
 
@@ -128,15 +123,12 @@ private fun subscribeToPolarHR(deviceId: String) {
 }
 
 private fun subscribeToPolarACC(deviceId: String) {
-    val accSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
-        EnumMap(PolarSensorSetting.SettingType::class.java)
-    accSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] = 52
-    accSettingsMap[PolarSensorSetting.SettingType.RESOLUTION] = 16
-    accSettingsMap[PolarSensorSetting.SettingType.RANGE] = 8
-    accSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 3
-    val accSettings = PolarSensorSetting(accSettingsMap)
     val header = "Phone timestamp;sensor timestamp [ns];X [mg];Y [mg];Z [mg] \n"
-        accDisposable = api.startAccStreaming(deviceId,accSettings)
+    accDisposable = requestStreamSettings(deviceId, PolarBleApi.PolarDeviceDataType.ACC)
+        .flatMap { settings: PolarSensorSetting ->
+            api.startAccStreaming(deviceId, settings)
+        }
+
             .observeOn(Schedulers.io())
             .subscribe(
                 { polarAccelerometerData: PolarAccelerometerData ->
@@ -166,15 +158,12 @@ private fun subscribeToPolarACC(deviceId: String) {
 }
 
 private fun subscribeToPolarGYR(deviceId: String) {
-    val gyrSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
-        EnumMap(PolarSensorSetting.SettingType::class.java)
-    gyrSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] = 52
-    gyrSettingsMap[PolarSensorSetting.SettingType.RESOLUTION] = 16
-    gyrSettingsMap[PolarSensorSetting.SettingType.RANGE] = 2000
-    gyrSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 3
-    val gyrSettings = PolarSensorSetting(gyrSettingsMap)
     val header = "Phone timestamp;sensor timestamp [ns];X [dps];Y [dps];Z [dps] \n"
-        gyrDisposable = api.startGyroStreaming(deviceId, gyrSettings)
+    gyrDisposable =
+        requestStreamSettings(deviceId, PolarBleApi.PolarDeviceDataType.GYRO)
+            .flatMap { settings: PolarSensorSetting ->
+                api.startGyroStreaming(deviceId, settings)
+            }
                 .observeOn(Schedulers.io())
                 .subscribe(
                     { polarGyroData: PolarGyroData ->
@@ -196,15 +185,12 @@ private fun subscribeToPolarGYR(deviceId: String) {
 }
 
 private fun subscribeToPolarMAG(deviceId: String) {
-    val magSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
-        EnumMap(PolarSensorSetting.SettingType::class.java)
-    magSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] = 20
-    magSettingsMap[PolarSensorSetting.SettingType.RESOLUTION] = 16
-    magSettingsMap[PolarSensorSetting.SettingType.RANGE] = 50
-    magSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 3
-    val magSettings = PolarSensorSetting(magSettingsMap)
     val header = "Phone timestamp;sensor timestamp [ns];X [G];Y [G];Z [G] \n"
-        magDisposable = api.startMagnetometerStreaming(deviceId, magSettings)
+    magDisposable =
+        requestStreamSettings(deviceId, PolarBleApi.PolarDeviceDataType.MAGNETOMETER)
+            .flatMap { settings: PolarSensorSetting ->
+                api.startMagnetometerStreaming(deviceId, settings)
+            }
                 .observeOn(Schedulers.io())
                 .subscribe(
                     { polarMagData: PolarMagnetometerData ->
@@ -225,18 +211,12 @@ private fun subscribeToPolarMAG(deviceId: String) {
 }
 
 private fun subscribeToPolarPPG(deviceId: String) {
-    val ppgSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
-        EnumMap(PolarSensorSetting.SettingType::class.java)
-    if (getDeviceType(deviceId) == "Head"){
-        ppgSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] = 176
-    } else {
-        ppgSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] = 176
-    }
-    ppgSettingsMap[PolarSensorSetting.SettingType.RESOLUTION] = 22
-    ppgSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 4
-    val ppgSettings = PolarSensorSetting(ppgSettingsMap)
     val header = "Phone timestamp;sensor timestamp [ns];channel 0;channel 1;channel 2;ambient \n"
-        ppgDisposable = api.startPpgStreaming(deviceId, ppgSettings)
+    ppgDisposable =
+        requestStreamSettings(deviceId, PolarBleApi.PolarDeviceDataType.PPG)
+            .flatMap { settings: PolarSensorSetting ->
+                api.startPpgStreaming(deviceId, settings)
+            }
                 .observeOn(Schedulers.io())
                 .subscribe(
                     { polarPpgData: PolarPpgData ->
@@ -258,13 +238,11 @@ private fun subscribeToPolarPPG(deviceId: String) {
 }
 
 private fun subscribeToPolarECG(deviceId: String) {
-    val ecgSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
-        EnumMap(PolarSensorSetting.SettingType::class.java)
-    ecgSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] = 130
-    ecgSettingsMap[PolarSensorSetting.SettingType.RESOLUTION] = 14
-    val ecgSettings = PolarSensorSetting(ecgSettingsMap)
     val header = "Phone timestamp;sensor timestamp [ns];voltage \n"
-        ecgDisposable = api.startEcgStreaming(deviceId, ecgSettings)
+    ecgDisposable = requestStreamSettings(deviceId, PolarBleApi.PolarDeviceDataType.ECG)
+        .flatMap { settings: PolarSensorSetting ->
+            api.startEcgStreaming(deviceId, settings)
+        }
             .observeOn(Schedulers.io())
             .subscribe(
                 { polarEcgData: PolarEcgData ->
@@ -284,10 +262,7 @@ private fun subscribeToPolarECG(deviceId: String) {
             )
 }
 
-fun requestStreamSettings(
-    identifier: String,
-    feature: PolarBleApi.PolarDeviceDataType
-): Flowable<PolarSensorSetting> {
+fun requestStreamSettings(identifier: String, feature: PolarBleApi.PolarDeviceDataType): Flowable<PolarSensorSetting> {
     val availableSettings = api.requestStreamSettings(identifier, feature)
     val allSettings = api.requestFullStreamSettings(identifier, feature)
         .onErrorReturn { error: Throwable ->
@@ -304,8 +279,8 @@ fun requestStreamSettings(
         if (available.settings.isEmpty()) {
             throw Throwable("Settings are not available")
         } else {
-            Log.d(TAG, "Feature " + feature + " available settings " + available.settings)
-            Log.d(TAG, "Feature " + feature + " all settings " + all.settings)
+            //Log.d(TAG, "Feature " + feature + " available settings " + available.settings)
+            //Log.d(TAG, "Feature " + feature + " all settings " + all.settings)
             return@zip android.util.Pair(available, all)
         }
     }
@@ -329,21 +304,17 @@ fun setAllSettings(available: Map<PolarSensorSetting.SettingType, Set<Int>>): Si
     }.subscribeOn(Schedulers.io())
 }
 
-fun setSettingToMax(
-    selected: MutableMap<PolarSensorSetting.SettingType, Int>,
-    type: PolarSensorSetting.SettingType,
-    availibleSettings: Map<PolarSensorSetting.SettingType, Set<Int>>
-) {
+fun setSettingToMax(selected: MutableMap<PolarSensorSetting.SettingType, Int>, type: PolarSensorSetting.SettingType, availibleSettings: Map<PolarSensorSetting.SettingType, Set<Int>>) {
     var maxValue = 0
     val availibleValuesForType = availibleSettings[type]?.toList()
     if (availibleValuesForType != null) {
         for (i in availibleValuesForType.indices) {
             if (availibleValuesForType[i] > maxValue) {
                 maxValue = availibleValuesForType[i]
-                Log.d("", "Found value ${availibleValuesForType[i]} for setting $type")
+                //Log.d("", "Found value ${availibleValuesForType[i]} for setting $type")
             }
         }
+        selected[type] = maxValue
     }
-    selected[type] = maxValue
     Log.d("", "Setting $type was autoset to $maxValue")
 }
