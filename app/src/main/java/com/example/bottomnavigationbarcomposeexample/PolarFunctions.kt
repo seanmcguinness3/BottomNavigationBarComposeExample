@@ -291,18 +291,18 @@ private fun subscribeToPolarMAG(deviceId: String) {
 private fun subscribeToPolarPPG(deviceId: String) {
     val ppgSettingsMap: MutableMap<PolarSensorSetting.SettingType, Int> =
         EnumMap(PolarSensorSetting.SettingType::class.java)
-    ppgSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] = 20
-    ppgSettingsMap[PolarSensorSetting.SettingType.RESOLUTION] = 16
-    ppgSettingsMap[PolarSensorSetting.SettingType.RANGE] = 50
-    ppgSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 3
+    if (getDeviceType(deviceId) == "Head"){
+        ppgSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] = 176
+    } else {
+        ppgSettingsMap[PolarSensorSetting.SettingType.SAMPLE_RATE] = 176
+    }
+    ppgSettingsMap[PolarSensorSetting.SettingType.RESOLUTION] = 22
+    ppgSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 4
+    val magSettings = PolarSensorSetting(ppgSettingsMap)
     val header = "Phone timestamp;sensor timestamp [ns];channel 0;channel 1;channel 2;ambient \n"
     val isDisposed = ppgDisposable?.isDisposed ?: true
     if (isDisposed) {
-        ppgDisposable =
-            requestStreamSettings(deviceId, PolarBleApi.PolarDeviceDataType.PPG)
-                .flatMap { settings: PolarSensorSetting ->
-                    api.startPpgStreaming(deviceId, settings)
-                }
+        ppgDisposable = api.startPpgStreaming(deviceId, settings)
                 //.observeOn(Schedulers.io())
                 .subscribe(
                     { polarPpgData: PolarPpgData ->
