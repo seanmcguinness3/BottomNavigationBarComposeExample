@@ -44,40 +44,8 @@ fun saveToLogFiles(saveToFiles: Boolean) {
     saveToLogFiles = saveToFiles //this actuall doesn't work I don't think b/c it's called in a subscribe which may or may not get an updated version of thsi variable
     //it's kinda a dumb variable anyway so get rid of it if you have time/think of something better
 }
-fun subscribeToAllPolarDataSingle(deviceId: String) {
-    val isDisposed = dcDisposable?.isDisposed ?: true
-    if (isDisposed) {
-            if (deviceId == emptyPolarIDListString) {
-                Log.d(TAG, "Polar device list was empty")
-                return //If there's no polar devices, don't run any of this
-            } else {
-                Log.d(TAG, "Subscribe to polar device $deviceId called")
-            }
-            var timeStampInfo = FirstTimeStamps(deviceId)
-            firstTimeStamps.add(timeStampInfo)
-            val deviceType = getDeviceType(deviceId)
-            Log.d("", "Subscribing to $deviceType sensor")
-            //Trying to subscribe to unavailable streams was causing unpredictability
-            //specifically, trying to subscribe to ECG with the pucks was causing the ACC to fail
-            if (deviceType == "Chest") {
-                subscribeToPolarHR(deviceId)
-                subscribeToPolarACC(deviceId)
-                subscribeToPolarECG(deviceId)
-            } else {
-                subscribeToPolarHR(deviceId)
-                subscribeToPolarACC(deviceId)
-                subscribeToPolarGYR(deviceId)
-                subscribeToPolarMAG(deviceId)
-                subscribeToPolarPPG(deviceId)
-            }
 
-    } else {
-        dcDisposable?.dispose()
-    }
-}
-
-suspend fun subscribeToAllPolarData(deviceIdArray: List<String>) {
-//fun subscribeToAllPolarData(deviceIdArray: List<String>) {
+fun subscribeToAllPolarData(deviceIdArray: List<String>) {
     val isDisposed = dcDisposable?.isDisposed ?: true
     if (isDisposed) {
         for (deviceId in deviceIdArray) {
@@ -102,16 +70,8 @@ suspend fun subscribeToAllPolarData(deviceIdArray: List<String>) {
                 subscribeToPolarACC(deviceId)
                 subscribeToPolarGYR(deviceId)
                 subscribeToPolarMAG(deviceId)
-                subscribeToPolarPPG(deviceId)
+                //fsubscribeToPolarPPG(deviceId)
             }
-            //This seems like it works but it actually stops logging
-            //going to re-implement the old version and just hardcode the settings
-            //if it's still a problem, search for a real reactivX solution
-            //I think requesting the settings stops the streams. not sure.
-            //Log.d("","About to sleep")
-            //Thread.sleep(5000)
-            //delay(10000) //this might be about as good as it gets without using a reactive programming setup
-            //Log.d("","Just Woke")
         }
 
     } else {
@@ -298,12 +258,12 @@ private fun subscribeToPolarPPG(deviceId: String) {
     }
     ppgSettingsMap[PolarSensorSetting.SettingType.RESOLUTION] = 22
     ppgSettingsMap[PolarSensorSetting.SettingType.CHANNELS] = 4
-    val magSettings = PolarSensorSetting(ppgSettingsMap)
+    val ppgSettings = PolarSensorSetting(ppgSettingsMap)
     val header = "Phone timestamp;sensor timestamp [ns];channel 0;channel 1;channel 2;ambient \n"
     val isDisposed = ppgDisposable?.isDisposed ?: true
     if (isDisposed) {
-        ppgDisposable = api.startPpgStreaming(deviceId, settings)
-                //.observeOn(Schedulers.io())
+        ppgDisposable = api.startPpgStreaming(deviceId, ppgSettings)
+                .observeOn(Schedulers.io())
                 .subscribe(
                     { polarPpgData: PolarPpgData ->
                         val deviceIdx = getDeviceIndexInTimestampArray(deviceId)
@@ -337,7 +297,7 @@ private fun subscribeToPolarECG(deviceId: String) {
     val isDisposed = ecgDisposable?.isDisposed ?: true
     if (isDisposed) {
         ecgDisposable = api.startEcgStreaming(deviceId, ecgSettings)
-            //.observeOn(Schedulers.io())
+            .observeOn(Schedulers.io())
             .subscribe(
                 { polarEcgData: PolarEcgData ->
                     val deviceIdx = getDeviceIndexInTimestampArray(deviceId)

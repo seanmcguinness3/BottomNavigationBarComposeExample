@@ -90,7 +90,7 @@ fun HomeScreen() {
                         }
                         saveToLogFiles(true)
                         bleStreamsStarted = true
-                        //subscribeToAllPolarData(polarDeviceIdListForConnection.toList())
+                        subscribeToAllPolarData(polarDeviceIdListForConnection.toList())
                     }
                 }) {
                 Text(dataCollectButtonText)
@@ -98,7 +98,7 @@ fun HomeScreen() {
             LaunchedEffect(key1 = dataCollectButtonText){
                 if (dataCollectButtonText == "Starting..."){
                     Log.d("","data collect launched effect called")
-                    subscribeToAllPolarData(polarDeviceIdListForConnection.toList())
+                    //subscribeToAllPolarData(polarDeviceIdListForConnection.toList())
                     delay(15000)  //See if there's a way to get the above function to return an on finished
                     dataCollectButtonText = "Data Collection Started"
                 }
