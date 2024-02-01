@@ -279,7 +279,7 @@ fun requestStreamSettings(identifier: String, feature: PolarBleApi.PolarDeviceDa
         if (available.settings.isEmpty()) {
             throw Throwable("Settings are not available")
         } else {
-            //Log.d(TAG, "Feature " + feature + " available settings " + available.settings)
+            Log.d(TAG, "Feature " + feature + " available settings " + available.settings)
             //Log.d(TAG, "Feature " + feature + " all settings " + all.settings)
             return@zip android.util.Pair(available, all)
         }
