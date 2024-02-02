@@ -6,7 +6,6 @@ import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.content.Context
 import android.util.Log
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -36,20 +35,20 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.time.Duration.Companion.seconds
 
-public const val emptyPolarIDListString = "No Connected ID's"
+const val emptyPolarIDListString = "No Connected ID's"
+
+data class AvailableDevices(var deviceName: String){
+    var connected: String = "Connect"
+}
 
 var firstDeviceFlag = true
 var firstConnectedDeviceFlag = true
 var deviceListForHomeScreen = mutableStateListOf<String>("No Connected Devices")
+var deviceListForDeviceScreen = mutableStateListOf<AvailableDevices>(AvailableDevices(emptyPolarIDListString))
 var polarDeviceIdListForConnection = mutableStateListOf<String>(emptyPolarIDListString)
 lateinit var voMaster: BluetoothDevice
 var lapTimeFileExists = false
@@ -98,7 +97,7 @@ fun HomeScreen() {
             LaunchedEffect(key1 = dataCollectButtonText){
                 if (dataCollectButtonText == "Starting..."){
                     Log.d("","data collect launched effect called")
-                    //subscribeToAllPolarData(polarDeviceIdListForConnection.toList())
+                    //SEAN refactor this is another re-work, not super important though
                     delay(15000)  //See if there's a way to get the above function to return an on finished
                     dataCollectButtonText = "Data Collection Started"
                 }
@@ -200,7 +199,7 @@ fun HomeScreenPreview() {
 
 
 @Composable
-fun DevicesScreen(mainViewModel: MainActivity.DeviceViewModel = viewModel()) {
+fun DevicesScreen() {
     var scanBLE by remember { mutableStateOf(false) }
     var scanButtonText by remember { mutableStateOf("Start Scan") }
     Column(
@@ -231,12 +230,11 @@ fun DevicesScreen(mainViewModel: MainActivity.DeviceViewModel = viewModel()) {
         }
         LazyColumn(modifier = Modifier.padding(vertical = 4.dp))
         {
-            items(items = mainViewModel.deviceList) { name ->
-                ListItem(name = name)
+            items(items = deviceListForDeviceScreen) { availableDevices: AvailableDevices ->
+                ListAvailableDevices(name = availableDevices.deviceName, connected = availableDevices.connected)
             }
         }
     }
-
     if (scanBLE) {
         StartScan(System.currentTimeMillis())
         scanBLE = false
@@ -244,7 +242,7 @@ fun DevicesScreen(mainViewModel: MainActivity.DeviceViewModel = viewModel()) {
 }
 
 @Composable
-fun ListItem(name: String) {
+fun ListAvailableDevices(name: String, connected: String) {
     var buttonText by remember { mutableStateOf("Connect") }
     Surface(
         color = colorResource(id = R.color.colorPrimary),
@@ -282,7 +280,8 @@ fun ListItem(name: String) {
                         Log.d("DD", "Tapped on $name")
                         buttonText = "Connecting..." // NEXT TIME U MESS WITH THIS DO A VARIABLE
                     })
-                { Text(buttonText) }
+                //{ Text(buttonText) }
+                { Text(connected) }
                 LaunchedEffect(key1 = buttonText) {
                     Log.d("", "Launched effect running")
                     if (buttonText == "Connecting...") {
@@ -291,24 +290,10 @@ fun ListItem(name: String) {
                         if (name.contains("Polar")) {
                             api.connectToDevice(deviceID)
                         }
-                        delay(10.seconds)  //SEAN REFACTOR There's actually an override function (deviceConnected(polarDeviceInfo: PolarDeviceInfo) )
-                        //I think you could probably use it to add the device to the list, and change the text to connected. That way you don't need this delay in the
-                        //launched effect, and if you execute the below code in the override it might not matter what screen you're on.
-                        if (name.contains("Polar")) {
-                            Log.d("", "adding polar device $deviceID to home screen")
-                            if (firstConnectedDeviceFlag) {
-                                deviceListForHomeScreen[0] = name
-                                polarDeviceIdListForConnection[0] = getPolarDeviceIDFromName(name)
-                                firstConnectedDeviceFlag = false
-                            } else {
-                                deviceListForHomeScreen.add(name)
-                                polarDeviceIdListForConnection.add(getPolarDeviceIDFromName(name))
-                            }
-                        } else {
-                            //voMaster = name
-                            //^^this would be the ideal structure, but need to figure out how to go from
-                            //name string back to BluetoothDevice in order for this to work
-                            //for now voMaster is set during the scan callback
+                        delay(10.seconds) //REFACTOR
+                        //deviceListForDeviceScreen[0].connected = "ass"
+                        if (!name.contains("Polar")) {
+                            //voMaster = name ^^this would be the ideal structure, but need to figure out how to go from name string back to BluetoothDevice in order for this to work for now voMaster is set during the scan callback
                             if (firstConnectedDeviceFlag) {
                                 deviceListForHomeScreen[0] = name
                                 firstConnectedDeviceFlag = false
@@ -316,7 +301,7 @@ fun ListItem(name: String) {
                                 deviceListForHomeScreen.add(name)
                             }
                         }
-                        buttonText = "Connected"
+                        //if (connected) buttonText = "Connected"
                     }
 
                 }
@@ -329,7 +314,7 @@ fun ListItem(name: String) {
 
 @Composable
 @SuppressLint("MissingPermission")
-fun StartScan(startTime: Long, mainViewModel: MainActivity.DeviceViewModel = viewModel()) {
+fun StartScan(startTime: Long) {
     Log.d("DD", "Now scanning")
     val context = LocalContext.current
 
@@ -346,17 +331,16 @@ fun StartScan(startTime: Long, mainViewModel: MainActivity.DeviceViewModel = vie
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             super.onScanResult(callbackType, result)
             var notInList = true
-            for (deviceInListName in mainViewModel.deviceList) {
-                if (result.device.name == deviceInListName) notInList = false
+            for (deviceInListName in deviceListForDeviceScreen) {
+                if (result.device.name == deviceInListName.deviceName) notInList = false
             }
             if (result.device.name != null) {
-                //sean voMaster this is were to set the voMaster variable
                 if ((result.device.name.contains("Polar") || result.device.name.contains("VO2 Master")) && notInList) {
                     if (firstDeviceFlag) {
-                        mainViewModel.deviceList[0] = result.device.name
+                        deviceListForDeviceScreen[0].deviceName = result.device.name
                         firstDeviceFlag = false
                     } else {
-                        mainViewModel.deviceList.add(result.device.name)
+                        deviceListForDeviceScreen.add(AvailableDevices(result.device.name))
                     }
                     //ISSUE HERE: I'm directly setting this variable on the scan, for non polar device.
                     //This is because for polar devices, the api allows you to get the BluetoothDevice from the name
