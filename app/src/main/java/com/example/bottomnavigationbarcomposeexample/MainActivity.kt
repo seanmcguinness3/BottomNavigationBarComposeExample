@@ -94,8 +94,6 @@ class MainActivity : ComponentActivity() {
                     Log.d("", "${deviceListForDeviceScreen[index].deviceName} (from list) should be = ${polarDeviceInfo.name} (from callback)")
                     val testList = getPolarDeviceIDFromName(deviceListForDeviceScreen[index].deviceName) //refactor
                     val testCallback = getPolarDeviceIDFromName(polarDeviceInfo.name) //add .deviceId to data class
-                    Log.d("", testList)
-                    Log.d("", testCallback)
                     if (testList == testCallback){
                         deviceListForDeviceScreen[index].connected = "Connected"
                         deviceListForDeviceScreen.add(AvailableDevices("none")) //This'll actually work. so adding something works but not changing. supposed to be somewhat fixable but idk. seems chill to me.
@@ -281,6 +279,7 @@ fun BottomNavigationBar(navController: NavController) {
         }
     }
 }
+
 
 @Preview(showBackground = true)
 @Composable

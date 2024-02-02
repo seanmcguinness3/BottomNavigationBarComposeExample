@@ -42,6 +42,7 @@ import kotlin.time.Duration.Companion.seconds
 const val emptyPolarIDListString = "No Connected ID's"
 
 data class AvailableDevices(var deviceName: String){
+    var deviceId: String = "none"
     var connected: String = "Connect"
 }
 
@@ -231,7 +232,7 @@ fun DevicesScreen() {
         LazyColumn(modifier = Modifier.padding(vertical = 4.dp))
         {
             items(items = deviceListForDeviceScreen) { availableDevices: AvailableDevices ->
-                ListAvailableDevices(name = availableDevices.deviceName, connected = availableDevices.connected)
+                ListAvailableDevices(name = availableDevices.deviceName, id = availableDevices.deviceId, connected = availableDevices.connected)
             }
         }
     }
@@ -242,8 +243,8 @@ fun DevicesScreen() {
 }
 
 @Composable
-fun ListAvailableDevices(name: String, connected: String) {
-    var buttonText by remember { mutableStateOf("Connect") }
+fun ListAvailableDevices(name: String, id: String, connected: String) {
+    var buttonTextState by remember { mutableStateOf("Connect") }
     Surface(
         color = colorResource(id = R.color.colorPrimary),
         modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)
@@ -278,20 +279,26 @@ fun ListAvailableDevices(name: String, connected: String) {
                     ),
                     onClick = {
                         Log.d("DD", "Tapped on $name")
-                        buttonText = "Connecting..." // NEXT TIME U MESS WITH THIS DO A VARIABLE
+                        for (index in deviceListForDeviceScreen.indices){
+                            if (getPolarDeviceIDFromName(deviceListForDeviceScreen[index].deviceName) == getPolarDeviceIDFromName(name)){
+                                deviceListForDeviceScreen[index].connected = "Connecting..."
+                                buttonTextState = "Connecting..."
+                                deviceListForDeviceScreen.add(AvailableDevices("none")) //This'll actually work. so adding something works but not changing. supposed to be somewhat fixable but idk. seems chill to me.
+                                deviceListForDeviceScreen.remove(AvailableDevices("none")) //https://stackoverflow.com/questions/69718059/android-jetpack-compose-mutablestatelistof-not-doing-recomposition/69718724#69718724
+                            }
+                        }
                     })
                 //{ Text(buttonText) }
                 { Text(connected) }
-                LaunchedEffect(key1 = buttonText) {
+                LaunchedEffect(key1 = buttonTextState) {
                     Log.d("", "Launched effect running")
-                    if (buttonText == "Connecting...") {
+                    if (buttonTextState == "Connecting...") {
                         Log.d("","Connecting to device in launchedEffect")
                         val deviceID = getPolarDeviceIDFromName(name)
                         if (name.contains("Polar")) {
                             api.connectToDevice(deviceID)
                         }
                         delay(10.seconds) //REFACTOR
-                        //deviceListForDeviceScreen[0].connected = "ass"
                         if (!name.contains("Polar")) {
                             //voMaster = name ^^this would be the ideal structure, but need to figure out how to go from name string back to BluetoothDevice in order for this to work for now voMaster is set during the scan callback
                             if (firstConnectedDeviceFlag) {
@@ -301,7 +308,6 @@ fun ListAvailableDevices(name: String, connected: String) {
                                 deviceListForHomeScreen.add(name)
                             }
                         }
-                        //if (connected) buttonText = "Connected"
                     }
 
                 }
@@ -340,7 +346,7 @@ fun StartScan(startTime: Long) {
                         deviceListForDeviceScreen[0].deviceName = result.device.name
                         firstDeviceFlag = false
                     } else {
-                        deviceListForDeviceScreen.add(AvailableDevices(result.device.name))
+                        deviceListForDeviceScreen.add(AvailableDevices(deviceName = result.device.name))
                     }
                     //ISSUE HERE: I'm directly setting this variable on the scan, for non polar device.
                     //This is because for polar devices, the api allows you to get the BluetoothDevice from the name
