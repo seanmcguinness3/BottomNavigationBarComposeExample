@@ -46,11 +46,17 @@ data class AvailableDevices(var deviceName: String){
     var connected: String = "Connect"
 }
 
+data class ConnectedDevices(var deviceName: String){
+    var deviceId: String = "none" //some refactoring can be done
+    var accValue: Int = 0
+}
+
 var firstDeviceFlag = true
 var firstConnectedDeviceFlag = true
-var deviceListForHomeScreen = mutableStateListOf<String>("No Connected Devices")
-var deviceListForDeviceScreen = mutableStateListOf<AvailableDevices>(AvailableDevices(emptyPolarIDListString))
-var polarDeviceIdListForConnection = mutableStateListOf<String>(emptyPolarIDListString)
+//var deviceListForHomeScreen = mutableStateListOf<String>("No Connected Devices")
+var deviceListForHomeScreen = mutableStateListOf(ConnectedDevices("No Connected Devices"))
+var deviceListForDeviceScreen = mutableStateListOf(AvailableDevices(emptyPolarIDListString))
+var polarDeviceIdListForConnection = mutableStateListOf(emptyPolarIDListString)
 lateinit var voMaster: BluetoothDevice
 var lapTimeFileExists = false
 var bleStreamsStarted = false
@@ -106,8 +112,8 @@ fun HomeScreen() {
             }
             LazyColumn(modifier = Modifier.padding(vertical = 4.dp))
             {
-                items(items = deviceListForHomeScreen) { name: String ->
-                    ListConnectedDevice(name = name)
+                items(items = deviceListForHomeScreen) { connectedDevices: ConnectedDevices ->
+                    ListConnectedDevice(name = connectedDevices.deviceName, acc = connectedDevices.accValue)
                 }
             }
         }
@@ -167,7 +173,7 @@ fun HomeScreen() {
 }
 
 @Composable
-fun ListConnectedDevice(name: String) {
+fun ListConnectedDevice(name: String, acc: Int) {
     Surface(
         color = colorResource(id = R.color.colorPrimary),
         modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)
@@ -180,12 +186,12 @@ fun ListConnectedDevice(name: String) {
             Row {
                 Column(modifier = Modifier.weight(1f))
                 {
-                    Text(text = "Device", color = colorResource(id = R.color.colorText))
                     Text(
                         text = name, style = MaterialTheme.typography.h6.copy(
                             fontWeight = FontWeight.ExtraBold
                         ), color = colorResource(id = R.color.colorText)
                     )
+                    Text(text = "ACC: $acc", color = colorResource(id = R.color.colorText))
                 }
             }
         }
@@ -280,7 +286,8 @@ fun ListAvailableDevices(name: String, id: String, connected: String) {
                     onClick = {
                         Log.d("DD", "Tapped on $name")
                         for (index in deviceListForDeviceScreen.indices){
-                            if (getPolarDeviceIDFromName(deviceListForDeviceScreen[index].deviceName) == getPolarDeviceIDFromName(name)){
+                            deviceListForDeviceScreen[index].deviceId
+                            if (deviceListForDeviceScreen[index].deviceId == id){
                                 deviceListForDeviceScreen[index].connected = "Connecting..."
                                 buttonTextState = "Connecting..."
                                 deviceListForDeviceScreen.add(AvailableDevices("none")) //This'll actually work. so adding something works but not changing. supposed to be somewhat fixable but idk. seems chill to me.
@@ -302,10 +309,10 @@ fun ListAvailableDevices(name: String, id: String, connected: String) {
                         if (!name.contains("Polar")) {
                             //voMaster = name ^^this would be the ideal structure, but need to figure out how to go from name string back to BluetoothDevice in order for this to work for now voMaster is set during the scan callback
                             if (firstConnectedDeviceFlag) {
-                                deviceListForHomeScreen[0] = name
+                                deviceListForHomeScreen[0].deviceName = name
                                 firstConnectedDeviceFlag = false
                             } else {
-                                deviceListForHomeScreen.add(name)
+                                deviceListForHomeScreen.add(ConnectedDevices(name))
                             }
                         }
                     }
@@ -344,10 +351,19 @@ fun StartScan(startTime: Long) {
                 if ((result.device.name.contains("Polar") || result.device.name.contains("VO2 Master")) && notInList) {
                     if (firstDeviceFlag) {
                         deviceListForDeviceScreen[0].deviceName = result.device.name
+                        if (result.device.name.contains("Polar")){
+                            deviceListForDeviceScreen[0].deviceId = getPolarDeviceIDFromName(result.device.name)
+                        }
                         firstDeviceFlag = false
                     } else {
                         deviceListForDeviceScreen.add(AvailableDevices(deviceName = result.device.name))
+                        if (result.device.name.contains("Polar")){
+                            val idx = deviceListForDeviceScreen.indexOf(AvailableDevices(result.device.name))
+                            deviceListForDeviceScreen[idx].deviceId = getPolarDeviceIDFromName(result.device.name)
+
+                        }
                     }
+
                     //ISSUE HERE: I'm directly setting this variable on the scan, for non polar device.
                     //This is because for polar devices, the api allows you to get the BluetoothDevice from the name
                     //I don't know how to do that for non polar devices, but If i figure that out i can get rid of this

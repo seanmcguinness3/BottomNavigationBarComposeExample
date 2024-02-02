@@ -82,19 +82,17 @@ class MainActivity : ComponentActivity() {
             override fun deviceConnected(polarDeviceInfo: PolarDeviceInfo) {
                 Log.d("", "adding polar device ${polarDeviceInfo.deviceId}  to home screen")
                 if (firstConnectedDeviceFlag) {
-                    deviceListForHomeScreen[0] = polarDeviceInfo.name
+                    deviceListForHomeScreen[0] = ConnectedDevices(polarDeviceInfo.name)
                     polarDeviceIdListForConnection[0] = polarDeviceInfo.deviceId
                     firstConnectedDeviceFlag = false
                 } else {
-                    deviceListForHomeScreen.add(polarDeviceInfo.name)
+                    deviceListForHomeScreen.add(ConnectedDevices(polarDeviceInfo.name))
                     polarDeviceIdListForConnection.add(polarDeviceInfo.deviceId)
                 }
-                //for (device in deviceListForDeviceScreen){
+                //YOU CAN REPLACE THIS WITH A .INDEXOF, just search for .indexof to see how its doen
+                //actually if you wanna do that then deviceId has to be the main
                 for (index in deviceListForDeviceScreen.indices){
-                    Log.d("", "${deviceListForDeviceScreen[index].deviceName} (from list) should be = ${polarDeviceInfo.name} (from callback)")
-                    val testList = getPolarDeviceIDFromName(deviceListForDeviceScreen[index].deviceName) //refactor
-                    val testCallback = getPolarDeviceIDFromName(polarDeviceInfo.name) //add .deviceId to data class
-                    if (testList == testCallback){
+                    if (deviceListForDeviceScreen[index].deviceId == polarDeviceInfo.deviceId){
                         deviceListForDeviceScreen[index].connected = "Connected"
                         deviceListForDeviceScreen.add(AvailableDevices("none")) //This'll actually work. so adding something works but not changing. supposed to be somewhat fixable but idk. seems chill to me.
                         deviceListForDeviceScreen.remove(AvailableDevices("none")) //https://stackoverflow.com/questions/69718059/android-jetpack-compose-mutablestatelistof-not-doing-recomposition/69718724#69718724

@@ -146,6 +146,14 @@ private fun subscribeToPolarACC(deviceId: String) {
                         }
                         //Log.d(TAG, "ACC    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
                     }
+                    for (index in deviceListForDeviceScreen.indices){
+                        if (getPolarDeviceIDFromName(deviceListForHomeScreen[index].deviceName) == deviceId){
+                            deviceListForHomeScreen[index].accValue = polarAccelerometerData.samples[0].x
+                            deviceListForHomeScreen.add(ConnectedDevices("Refresh"))
+                            deviceListForHomeScreen.remove(ConnectedDevices("Refresh"))
+                            Log.d("","Trying to set homescreen acc val to ${polarAccelerometerData.samples[0].x}")
+                        }
+                    }
                     Log.d("","ACC for $deviceId, ${getDeviceType(deviceId)} is running")
                 },
                 { error: Throwable ->
