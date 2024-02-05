@@ -146,7 +146,7 @@ private fun subscribeToPolarACC(deviceId: String) {
                         }
                         //Log.d(TAG, "ACC    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
                     }
-                    for (index in deviceListForDeviceScreen.indices){
+                    for (index in deviceListForHomeScreen.indices){
                         if (getPolarDeviceIDFromName(deviceListForHomeScreen[index].deviceName) == deviceId){
                             deviceListForHomeScreen[index].accValue = polarAccelerometerData.samples[0].x
                             deviceListForHomeScreen.add(ConnectedDevices("Refresh"))

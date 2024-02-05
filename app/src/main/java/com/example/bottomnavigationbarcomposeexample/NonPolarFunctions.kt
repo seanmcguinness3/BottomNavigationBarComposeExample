@@ -57,7 +57,7 @@ private val gattCallback = object :BluetoothGattCallback(){
         val deviceAddress = gatt!!.device.address
         if (status == BluetoothGatt.GATT_SUCCESS){
             if(newState == BluetoothGatt.STATE_CONNECTED){
-                Log.d(TAG,"connected to $deviceAddress")
+                Log.d(TAG,"connected to $deviceAddress use this to add to home screen!!")
                 android.os.Handler(Looper.getMainLooper()).post {
                     gatt!!.discoverServices()
                 }

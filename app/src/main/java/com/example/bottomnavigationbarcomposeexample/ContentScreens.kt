@@ -44,16 +44,17 @@ const val emptyPolarIDListString = "No Connected ID's"
 data class AvailableDevices(var deviceName: String){
     var deviceId: String = "none"
     var connected: String = "Connect"
+    lateinit var bluetoothDevice: BluetoothDevice
 }
 
 data class ConnectedDevices(var deviceName: String){
     var deviceId: String = "none" //some refactoring can be done
     var accValue: Int = 0
+    lateinit var bluetoothDevice: BluetoothDevice
 }
 
 var firstDeviceFlag = true
 var firstConnectedDeviceFlag = true
-//var deviceListForHomeScreen = mutableStateListOf<String>("No Connected Devices")
 var deviceListForHomeScreen = mutableStateListOf(ConnectedDevices("No Connected Devices"))
 var deviceListForDeviceScreen = mutableStateListOf(AvailableDevices(emptyPolarIDListString))
 var polarDeviceIdListForConnection = mutableStateListOf(emptyPolarIDListString)
@@ -77,6 +78,7 @@ fun HomeScreen() {
                 .background(colorResource(id = R.color.colorPrimaryDark))
                 .wrapContentSize(Alignment.TopCenter)
         ) {
+            //START DATA COLLECITON BUTTON
             Button(modifier = Modifier
                 .padding(horizontal = 20.dp, vertical = 20.dp)
                 .fillMaxWidth(1.0f),
@@ -238,7 +240,7 @@ fun DevicesScreen() {
         LazyColumn(modifier = Modifier.padding(vertical = 4.dp))
         {
             items(items = deviceListForDeviceScreen) { availableDevices: AvailableDevices ->
-                ListAvailableDevices(name = availableDevices.deviceName, id = availableDevices.deviceId, connected = availableDevices.connected)
+                ListAvailableDevices(name = availableDevices.deviceName, id = availableDevices.deviceId, connected = availableDevices.connected, device = availableDevices)
             }
         }
     }
@@ -249,7 +251,7 @@ fun DevicesScreen() {
 }
 
 @Composable
-fun ListAvailableDevices(name: String, id: String, connected: String) {
+fun ListAvailableDevices(name: String, id: String, connected: String, device: AvailableDevices) { //refactor to only use device parameter, because it contains all the info that the other pars do
     var buttonTextState by remember { mutableStateOf("Connect") }
     Surface(
         color = colorResource(id = R.color.colorPrimary),
@@ -305,14 +307,24 @@ fun ListAvailableDevices(name: String, id: String, connected: String) {
                         if (name.contains("Polar")) {
                             api.connectToDevice(deviceID)
                         }
-                        delay(10.seconds) //REFACTOR
+                        delay(5.seconds) //REFACTOR
                         if (!name.contains("Polar")) {
-                            //voMaster = name ^^this would be the ideal structure, but need to figure out how to go from name string back to BluetoothDevice in order for this to work for now voMaster is set during the scan callback
-                            if (firstConnectedDeviceFlag) {
-                                deviceListForHomeScreen[0].deviceName = name
+                            if (firstConnectedDeviceFlag) { //the polar sensors have the callback change the text to connected. The V02 master doesn't have an equivalent call back for this,
+                                //because the V02 Master doesn't actually connect first. It just has the name added to the home screen, then all at once it connects and starts streaming.
+                                //I honestly don't have a problem with it. Technically to be consistant, the VO2 master subscribeToNotifications() should be called from the data collect button press.
+                                //instead, it's called on the OnServicesDiscovered() override. Technically, OnServicesDiscovered() should be what changes this text and adds VO2 to home screen
+                                deviceListForHomeScreen[0].deviceName = device.deviceName
+                                deviceListForHomeScreen[0].bluetoothDevice = device.bluetoothDevice
+                                deviceListForDeviceScreen[0].connected = "Connected"
                                 firstConnectedDeviceFlag = false
                             } else {
-                                deviceListForHomeScreen.add(ConnectedDevices(name))
+                                val nonPolarDevice = ConnectedDevices(deviceName = device.deviceName)
+                                nonPolarDevice.bluetoothDevice = device.bluetoothDevice
+                                deviceListForHomeScreen.add(nonPolarDevice)
+                                val index = deviceListForDeviceScreen.indexOf(AvailableDevices(device.deviceName))
+                                deviceListForDeviceScreen[index].connected ="Connected"
+                                deviceListForDeviceScreen.add(AvailableDevices("none")) //This'll actually work. so adding something works but not changing. supposed to be somewhat fixable but idk. seems chill to me.
+                                deviceListForDeviceScreen.remove(AvailableDevices("none")) //https://stackoverflow.com/questions/69718059/android-jetpack-compose-mutablestatelistof-not-doing-recomposition/69718724#69718724
                             }
                         }
                     }
@@ -353,14 +365,17 @@ fun StartScan(startTime: Long) {
                         deviceListForDeviceScreen[0].deviceName = result.device.name
                         if (result.device.name.contains("Polar")){
                             deviceListForDeviceScreen[0].deviceId = getPolarDeviceIDFromName(result.device.name)
+                        } else {
+                            deviceListForDeviceScreen[0].bluetoothDevice = result.device
                         }
                         firstDeviceFlag = false
                     } else {
                         deviceListForDeviceScreen.add(AvailableDevices(deviceName = result.device.name))
+                        val idx = deviceListForDeviceScreen.indexOf(AvailableDevices(result.device.name))
                         if (result.device.name.contains("Polar")){
-                            val idx = deviceListForDeviceScreen.indexOf(AvailableDevices(result.device.name))
                             deviceListForDeviceScreen[idx].deviceId = getPolarDeviceIDFromName(result.device.name)
-
+                        } else if (result.device.name.contains("VO2 Master"))  {
+                            deviceListForDeviceScreen[idx].bluetoothDevice = result.device
                         }
                     }
 
