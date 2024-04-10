@@ -112,7 +112,7 @@ fun HomeScreen() {
             }
         }
         //LAP BUTTON
-        val list = listOf("Run", "Walk", "Stairs up", "Stairs down")
+        val list = listOf("Stand", "Sit", "Walk", "Walk upstairs", "Walk downstairs")
         val expanded = remember { mutableStateOf(false) }
         val currentValue = remember { mutableStateOf(list[0]) }
         val startText = remember { mutableStateOf("Start") }
