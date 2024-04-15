@@ -14,6 +14,7 @@ import android.util.Log
 import java.io.File
 import java.util.UUID
 import java.util.logging.Handler
+import kotlin.math.abs
 
 private const val TAG = "TAG"
 
@@ -97,23 +98,55 @@ private val gattCallback = object :BluetoothGattCallback(){
 
     }
 
-    override fun onCharacteristicChanged(
-        gatt: BluetoothGatt?,
-        characteristic: BluetoothGattCharacteristic?
-    ) {
-        val uuidString = characteristic!!.uuid.toString()
-        val strValueForDebug = characteristic.value
+    var data1527 = byteArrayOf(0)
+    var data1528 = byteArrayOf(0)
+    var data1527Recieved = false
+    var data1528Recieved = false
+    var data1527Time = 0L
+    var data1528Time = 0L
 
+    override fun onCharacteristicChanged(gatt: BluetoothGatt?, characteristic: BluetoothGattCharacteristic?) {
+        val uuidString = characteristic!!.uuid.toString()
+        val rawDataString = characteristic.value
+
+        //BUILD RAW DATA STRING
         var logString = ""
         var secondToLastIdx = 0
-        for(i in 0..(strValueForDebug.size-2)){
-            logString += "${strValueForDebug[i]}, "
+        for(i in 0..(rawDataString.size-2)){
+            logString += "${rawDataString[i]}, "
             secondToLastIdx = i
         }
         val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
-        logString += "${strValueForDebug[secondToLastIdx+1]}\n"
+        logString += "${rawDataString[secondToLastIdx+1]}\n"
         Log.d(TAG, "$adjustedPhoneTimeStamp; Data: $logString")
         val file = File("${getSaveFolder().absolutePath}/${uuidString}.txt")
         file.appendText("$adjustedPhoneTimeStamp; $logString")
+
+        //STATE MACHINE FOR RAW DATA CONVERSION
+        if (uuidString.contains("1527")){
+            data1527 = rawDataString
+            data1527Recieved = true
+            data1527Time = System.currentTimeMillis()
+        }
+        if (uuidString.contains("1528")){
+            data1528 = rawDataString
+            data1528Recieved = true
+            data1528Time = System.currentTimeMillis()
+        }
+        if (data1527Recieved && data1528Recieved) {
+            val dataTimeDiff = abs(data1527Time - data1528Time)
+            if (dataTimeDiff in 1..99) { //if the two data points came in within 100ms of each other, then they can be used for the conversion
+                val convertedVoData = convertRawVoData(rawDataString)
+                generateAndAppend("VO2Data.txt","$adjustedPhoneTimeStamp, $convertedVoData", "Phone timestamp, VO2 (mL/min)")
+            }
+            data1527Recieved = false
+            data1528Recieved = false
+        }
+
     }
+}
+
+private fun convertRawVoData(rawData: ByteArray): Double {
+    Log.d("DD", "ByteArray VO data: $rawData")
+    return 69.00
 }
