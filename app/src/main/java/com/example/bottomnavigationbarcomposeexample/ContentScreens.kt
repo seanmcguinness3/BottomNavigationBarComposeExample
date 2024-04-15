@@ -125,13 +125,13 @@ fun HomeScreen() {
                 ),
                 onClick = {
                     if (!lapTimeFileExists) {
-                        generateNewFile("Lap Times.txt")
+                        generateNewFile("LapTimes.txt")
                         lapTimeFileExists = true
                     }
-                    startText.value = if (startText.value == "Start"){ "End" } else { "Start" }
-                    val file = File("${getSaveFolder().absolutePath}/Lap Times.txt")
+                    val file = File("${getSaveFolder().absolutePath}/LapTimes.txt")
                     val timeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
                     file.appendText("${startText.value} of ${currentValue.value}: $timeStamp \n")
+                    startText.value = if (startText.value == "Start"){ "End" } else { "Start" }
                 }) {
                 Text("${startText.value} ${currentValue.value}")
             }
