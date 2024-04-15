@@ -301,6 +301,15 @@ fun ListAvailableDevices(name: String, id: String, connected: String) {
                         delay(10.seconds) //REFACTOR
                         if (!name.contains("Polar")) {
                             //voMaster = name ^^this would be the ideal structure, but need to figure out how to go from name string back to BluetoothDevice in order for this to work for now voMaster is set during the scan callback
+                            for (index in deviceListForDeviceScreen.indices){
+                                if (!deviceListForDeviceScreen[index].deviceName.contains("Polar")) {
+                                    deviceListForDeviceScreen[index].connected = "Connected"
+                                    buttonTextState = "Connected"
+                                    deviceListForDeviceScreen.add(AvailableDevices("none"))
+                                    deviceListForDeviceScreen.remove(AvailableDevices("none"))
+                                }
+                            }
+                            Log.d("","Adding Vo2 to home screen")
                             if (firstConnectedDeviceFlag) {
                                 deviceListForHomeScreen[0] = name
                                 firstConnectedDeviceFlag = false

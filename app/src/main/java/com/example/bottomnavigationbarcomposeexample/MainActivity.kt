@@ -89,7 +89,6 @@ class MainActivity : ComponentActivity() {
                     deviceListForHomeScreen.add(polarDeviceInfo.name)
                     polarDeviceIdListForConnection.add(polarDeviceInfo.deviceId)
                 }
-                //for (device in deviceListForDeviceScreen){
                 for (index in deviceListForDeviceScreen.indices){
                     Log.d("", "${deviceListForDeviceScreen[index].deviceName} (from list) should be = ${polarDeviceInfo.name} (from callback)")
                     val testList = getPolarDeviceIDFromName(deviceListForDeviceScreen[index].deviceName) //refactor
