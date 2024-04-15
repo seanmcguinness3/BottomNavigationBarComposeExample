@@ -120,7 +120,7 @@ fun HomeScreen() {
             }
         }
         //LAP BUTTON
-        val list = listOf("Run", "Walk", "Stairs up", "Stairs down")
+        val list = listOf("Stand", "Sit", "Walk", "Walk upstairs", "Walk downstairs")
         val expanded = remember { mutableStateOf(false) }
         val currentValue = remember { mutableStateOf(list[0]) }
         val startText = remember { mutableStateOf("Start") }
@@ -133,13 +133,13 @@ fun HomeScreen() {
                 ),
                 onClick = {
                     if (!lapTimeFileExists) {
-                        generateNewFile("Lap Times.txt")
+                        generateNewFile("LapTimes.txt")
                         lapTimeFileExists = true
                     }
-                    startText.value = if (startText.value == "Start"){ "End" } else { "Start" }
-                    val file = File("${getSaveFolder().absolutePath}/Lap Times.txt")
+                    val file = File("${getSaveFolder().absolutePath}/LapTimes.txt")
                     val timeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
                     file.appendText("${startText.value} of ${currentValue.value}: $timeStamp \n")
+                    startText.value = if (startText.value == "Start"){ "End" } else { "Start" }
                 }) {
                 Text("${startText.value} ${currentValue.value}")
             }
