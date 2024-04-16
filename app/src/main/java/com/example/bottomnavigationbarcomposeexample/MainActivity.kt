@@ -25,10 +25,10 @@ import androidx.navigation.compose.rememberNavController
 import androidx.compose.runtime.*
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
 import com.google.android.gms.location.LocationRequest
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.lifecycle.ViewModel
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.Granularity
 import com.google.android.gms.location.LocationAvailability
@@ -41,9 +41,11 @@ import com.polar.sdk.api.PolarBleApiCallback
 import com.polar.sdk.api.PolarBleApiDefaultImpl
 import com.polar.sdk.api.model.PolarDeviceInfo
 import com.polar.sdk.api.model.PolarHrData
-import kotlinx.coroutines.delay
-import java.io.File
 import java.util.UUID
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 
 private const val PERMISSION_REQUEST_CODE = 1
 lateinit var api: PolarBleApi
@@ -129,9 +131,40 @@ class MainActivity : ComponentActivity() {
 
         //START THE LOCATION TRACKING
         LocationManager(context, 10L, 1.0F).startLocationTracking()
+
+        //START THE BAROMETER MONITORING
+        val sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
+        SensorActivity().startBarometer(sensorManager, sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE))
     }
 
-    //class DeviceViewModel : ViewModel()
+    class SensorActivity() : Activity(), SensorEventListener {
+
+        //private lateinit var sensorManager: SensorManager
+        //private var mPressure: Sensor? = null
+/*        public override fun onCreate(savedInstanceState: Bundle?) {
+            super.onCreate(savedInstanceState)
+            sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
+            mPressure = sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE)
+        }*/
+        override fun onSensorChanged(event: SensorEvent){
+            //Log.d("", "barometer reading: ${event.values[0]}")
+            var timeStamp = 0L
+            if (firstTimeStamps.size >= 1){
+                timeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
+            }else{
+                timeStamp = 0L
+            }
+            generateAndAppend("BarometerData.txt","$timeStamp, ${event.values[0]} \n", "TimeStamp, pressure (hPa)")
+        }
+
+        override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
+            Log.d("", "The barometer accuracy changed")
+        }
+
+        fun startBarometer(sensorManager: SensorManager, mPressure: Sensor){
+            sensorManager.registerListener(this, mPressure, SensorManager.SENSOR_DELAY_NORMAL)
+        }
+    }
 
     @SuppressLint("MissingPermission")
     class LocationManager(
@@ -172,8 +205,8 @@ class MainActivity : ComponentActivity() {
             }else{
                 timeStamp = 0L
             }
-            val fileString = "$timeStamp; ${location.lastLocation!!.latitude}; ${location.lastLocation!!.longitude}; ${location.lastLocation!!.altitude} \n"
-            generateAndAppend("LocationData.txt",fileString,"TimeStamp; Latitude; Longitude; Altitude; \n")
+            val fileString = "$timeStamp, ${location.lastLocation!!.latitude}, ${location.lastLocation!!.longitude}, ${location.lastLocation!!.altitude} \n"
+            generateAndAppend("LocationData.txt",fileString,"TimeStamp, Latitude, Longitude, Altitude \n")
         }
 
         override fun onLocationAvailability(availability: LocationAvailability) {
