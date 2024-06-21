@@ -34,14 +34,14 @@ data class FirstTimeStamps(val sensorID: String) {
     var sensorTimeStamp: Long = 0L
 }
 
+var firstTimeStamps: MutableList<FirstTimeStamps> = ArrayList()
+
 fun getPolarDeviceIDFromName(name: String): String {
     return name.takeLast(8)  //Consider improving, especially if other polar device ID's are diff
 }
 
-var firstTimeStamps: MutableList<FirstTimeStamps> = ArrayList()
-
 fun saveToLogFiles(saveToFiles: Boolean) {
-    saveToLogFiles = saveToFiles //this actuall doesn't work I don't think b/c it's called in a subscribe which may or may not get an updated version of thsi variable
+    saveToLogFiles = saveToFiles //this actually doesn't work I don't think b/c it's called in a subscribe which may or may not get an updated version of thsi variable
     //it's kinda a dumb variable anyway so get rid of it if you have time/think of something better
 }
 
@@ -133,11 +133,19 @@ private fun subscribeToPolarACC(deviceId: String) {
             .subscribe(
                 { polarAccelerometerData: PolarAccelerometerData ->
                     val deviceIdx = getDeviceIndexInTimestampArray(deviceId)
+                    var averagedTimeStampAdjust = 0.0
+                    var numberOfSamples = 0
+                    var calculateTimestampOffset = false
                     for (data in polarAccelerometerData.samples) {
-                        if (firstTimeStamps[deviceIdx].sensorTimeStamp == 0L) {      //if the first timestamp hasn't been set (still zero) then set it
+                        if (firstTimeStamps[deviceIdx].sensorTimeStamp == 0L) {
+                            calculateTimestampOffset = true
+                        }
+                        if (calculateTimestampOffset) {      //if the first timestamp hasn't been set (still zero) then set it
                             val elapsedTime = System.currentTimeMillis() - firstPhoneTimeStamp //use elapsed time to account for time diff in sensor connection
-                            firstTimeStamps[deviceIdx].sensorTimeStamp = (data.timeStamp - (elapsedTime * 1e6)).toLong()
-                            Log.d("", "Elapsed time for $deviceId: $elapsedTime. time stamp index: $deviceIdx")
+                            averagedTimeStampAdjust += (data.timeStamp - (elapsedTime * 1e6)).toLong()
+                            numberOfSamples++
+                            //firstTimeStamps[deviceIdx].sensorTimeStamp = (data.timeStamp - (elapsedTime * 1e6)).toLong()
+                            Log.d("", "Elapsed time for $deviceId: $elapsedTime. averagedTimeStampAdjust = $averagedTimeStampAdjust, # of samples = $numberOfSamples")
                         }
                         val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
                         val adjustedSensorTimeStamp = data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
@@ -146,6 +154,11 @@ private fun subscribeToPolarACC(deviceId: String) {
                         }
                         //Log.d(TAG, "ACC    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
                     }
+                    if (firstTimeStamps[deviceIdx].sensorTimeStamp == 0L) { //only want to set this once
+                        firstTimeStamps[deviceIdx].sensorTimeStamp = (averagedTimeStampAdjust/numberOfSamples).toLong()//untested, trying to improve timestamp sync
+                        //but aparantly rob is going to handle...
+                    }
+                    calculateTimestampOffset = false
                     Log.d("","ACC for $deviceId, ${getDeviceType(deviceId)} is running")
                 },
                 { error: Throwable ->
