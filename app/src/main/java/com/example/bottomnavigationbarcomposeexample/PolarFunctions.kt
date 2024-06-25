@@ -135,16 +135,15 @@ private fun subscribeToPolarACC(deviceId: String) {
                     val deviceIdx = getDeviceIndexInTimestampArray(deviceId)
                     var averagedTimeStampAdjust = 0.0
                     var numberOfSamples = 0
-                    var calculateTimestampOffset = false
+                    var calculateTimestampOffset = false //sean refactor i think you can get rid of this variable, should be easy but don't wanna do it now cause not about to test anything
                     for (data in polarAccelerometerData.samples) {
                         if (firstTimeStamps[deviceIdx].sensorTimeStamp == 0L) {
                             calculateTimestampOffset = true
                         }
                         if (calculateTimestampOffset) {      //if the first timestamp hasn't been set (still zero) then set it
                             val elapsedTime = System.currentTimeMillis() - firstPhoneTimeStamp //use elapsed time to account for time diff in sensor connection
-                            averagedTimeStampAdjust += (data.timeStamp - (elapsedTime * 1e6)).toLong()
+                            averagedTimeStampAdjust += (data.timeStamp - (elapsedTime * 1e6)).toLong() //taking an average of the discrepancy between the phone and sensor time stamps
                             numberOfSamples++
-                            //firstTimeStamps[deviceIdx].sensorTimeStamp = (data.timeStamp - (elapsedTime * 1e6)).toLong()
                             Log.d("", "Elapsed time for $deviceId: $elapsedTime. averagedTimeStampAdjust = $averagedTimeStampAdjust, # of samples = $numberOfSamples")
                         }
                         val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
@@ -155,8 +154,8 @@ private fun subscribeToPolarACC(deviceId: String) {
                         //Log.d(TAG, "ACC    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
                     }
                     if (firstTimeStamps[deviceIdx].sensorTimeStamp == 0L) { //only want to set this once
-                        firstTimeStamps[deviceIdx].sensorTimeStamp = (averagedTimeStampAdjust/numberOfSamples).toLong()//untested, trying to improve timestamp sync
-                        //but aparantly rob is going to handle...
+                        firstTimeStamps[deviceIdx].sensorTimeStamp = (averagedTimeStampAdjust/numberOfSamples).toLong() //This made a good over the non averaging system
+                        //sean you should make this be the trigger for when to actually start saving data, to avoid the garbo timestamp data. But, might require some though to not end up with spaghetti
                     }
                     calculateTimestampOffset = false
                     Log.d("","ACC for $deviceId, ${getDeviceType(deviceId)} is running")
