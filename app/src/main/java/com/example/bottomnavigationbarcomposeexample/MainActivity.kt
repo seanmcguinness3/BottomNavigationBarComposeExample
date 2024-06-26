@@ -46,6 +46,7 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import java.util.Queue
 
 private const val PERMISSION_REQUEST_CODE = 1
 lateinit var api: PolarBleApi
@@ -198,13 +199,37 @@ class MainActivity : ComponentActivity() {
             locationClient.removeLocationUpdates(this)
         }
 
+        var speedQueueValues = ArrayDeque<Float>(50)
+        var speedQueueTimeStamps = ArrayDeque<Long>(50)
         override fun onLocationResult(location: LocationResult) {
             var timeStamp = 0L
             if (firstTimeStamps.size >= 1){
                 timeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
             }else{
-                timeStamp = 0L
+                timeStamp = System.currentTimeMillis()
             }
+            speedQueueValues.addFirst(location.lastLocation!!.speed)
+            speedQueueTimeStamps.addFirst(timeStamp)
+
+            var debugSpeedArrayString = "" //delete
+
+            var idxOfFiftySecondsAgo = 0 //going to have to loop through the timestamp array to find the queue index of speed value that happened 50 seconds ago
+            for (value in speedQueueTimeStamps){
+                val elapsedTime = timeStamp - value
+                debugSpeedArrayString += "$value, " //delete
+                if (elapsedTime > 50000L) { //sean replace 50L with an app wide constant for window size
+                    idxOfFiftySecondsAgo = speedQueueTimeStamps.indexOf(value) //sean you can break this for loop here when you're done
+                    Log.d("","idxOfFiftySecondsAgo: ${idxOfFiftySecondsAgo}")
+                    break
+                    //speedQueueTimeStamps.removeLast()
+                    //speedQueueValues.removeLast()
+                }
+            }
+            Log.d("","speed timestamp array: $debugSpeedArrayString")
+            val windowTimeOfSpeeds = speedQueueValues.take(idxOfFiftySecondsAgo)
+            val avgSpeedOverWindow = windowTimeOfSpeeds.average()
+            Log.d("","avgSpeedOverWindow: $avgSpeedOverWindow") //delete
+
             val fileString = "$timeStamp, ${location.lastLocation!!.latitude}, ${location.lastLocation!!.longitude}, ${location.lastLocation!!.altitude} \n"
             generateAndAppend("LocationData.txt",fileString,"TimeStamp, Latitude, Longitude, Altitude \n")
         }
@@ -216,7 +241,6 @@ class MainActivity : ComponentActivity() {
     }
 
 }
-
 
 fun getApi(context: Context): PolarBleApi {
     val api: PolarBleApi by lazy {
