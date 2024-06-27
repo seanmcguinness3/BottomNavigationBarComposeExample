@@ -102,8 +102,8 @@ fun HomeScreen() {
                     delay(15000)  //See if there's a way to get the above function to return an on finished
                     dataCollectButtonText = "Data Collection Started"
                 }
-
             }
+            
             LazyColumn(modifier = Modifier.padding(vertical = 4.dp))
             {
                 items(items = deviceListForHomeScreen) { name: String ->
@@ -154,9 +154,7 @@ fun HomeScreen() {
                             currentValue.value = it
                             expanded.value = false
                         }) {
-
                             Text(text = it)
-
                         }
                     }
                 }
