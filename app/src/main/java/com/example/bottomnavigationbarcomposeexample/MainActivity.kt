@@ -47,6 +47,8 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import kotlin.math.atan
+import kotlin.math.cos
+import kotlin.math.sin
 
 private const val PERMISSION_REQUEST_CODE = 1
 private const val timeWindow = 50000L
@@ -165,10 +167,8 @@ class MainActivity : ComponentActivity() {
             var idxOfFiftySecondsAgo = 0
             for (value in baroQueueTimeStamps){
                 val elapsedTime = timeStamp - value
-                //Log.d("","timestamp queue length: ${baroQueueTimeStamps.size} elapsed time: $elapsedTime")
-                if (elapsedTime > timeWindow && idxOfFiftySecondsAgo == 0) { //if the window start index hasn't been set, set it. sean replace 50L with constant,
-                    idxOfFiftySecondsAgo = baroQueueTimeStamps.indexOf(value) //sean you can break this for loop here when you're done
-                    Log.d("","idxOfFiftySecondsAgo: ${idxOfFiftySecondsAgo}")
+                if (elapsedTime > timeWindow && idxOfFiftySecondsAgo == 0) { //if the window start index hasn't been set, set it.
+                    idxOfFiftySecondsAgo = baroQueueTimeStamps.indexOf(value)
                 }
                 if (elapsedTime > 2 * timeWindow){ //after a super long time, start removing queue elements so it doesn't get too long
                     baroQueueTimeStamps.removeLast()
@@ -260,11 +260,20 @@ class MainActivity : ComponentActivity() {
         }
 
         private fun calculatePower(avgSpeedOverWindow: Double, altitudeDifference: Float) {
+            Log.d("","power calc function inputs, speed: $avgSpeedOverWindow, altitude diff: $altitudeDifference")
             val distance = avgSpeedOverWindow / timeWindow //I'm assuming that speed is in m/s, but I'm not sure, may have to check this on the bus
-            val grade = atan(altitudeDifference/distance)
+            val slopeAngle = atan(altitudeDifference/distance)
             //COMPUTE DRAGF
             val Cd = 0.63; val area = 0.5089; val rho = 1.2041
-            val dragF = 0.5 *
+            val dragF = 0.5 * Cd * area * rho * avgSpeedOverWindow * avgSpeedOverWindow
+            //COMPUTE GRAVITYF
+            val g = 9.8076; val mass = 75; //sean you'll have to enter the mass here. def needs to be changed
+            val gravityF = mass * g * sin(slopeAngle)
+            //COMPUTE ROLLRESISTANCEF
+            val Crr = 0.005
+            val rollResistanceF = Crr * mass * g * cos(slopeAngle)
+            val power = dragF + gravityF + rollResistanceF
+            Log.d("","resulting power was $power")
         }
 
         override fun onLocationAvailability(availability: LocationAvailability) {
