@@ -100,7 +100,7 @@ class MainActivity : ComponentActivity() {
                     Log.d("", "${deviceListForDeviceScreen[index].deviceName} (from list) should be = ${polarDeviceInfo.name} (from callback)")
                     val testList = getPolarDeviceIDFromName(deviceListForDeviceScreen[index].deviceName) //refactor
                     val testCallback = getPolarDeviceIDFromName(polarDeviceInfo.name) //add .deviceId to data class
-                    if (testList == testCallback){
+                    if (testList == testCallback){ //sean july there might be a better way to do this, see what ends up happeneing with the power display
                         deviceListForDeviceScreen[index].connected = "Connected"
                         deviceListForDeviceScreen.add(AvailableDevices("none")) //This'll actually work. so adding something works but not changing. supposed to be somewhat fixable but idk. seems chill to me.
                         deviceListForDeviceScreen.remove(AvailableDevices("none")) //https://stackoverflow.com/questions/69718059/android-jetpack-compose-mutablestatelistof-not-doing-recomposition/69718724#69718724
@@ -261,7 +261,7 @@ class MainActivity : ComponentActivity() {
 
         private fun calculatePower(avgSpeedOverWindow: Double, altitudeDifference: Float) {
             Log.d("","power calc function inputs, speed: $avgSpeedOverWindow, altitude diff: $altitudeDifference")
-            val distance = avgSpeedOverWindow / timeWindow //I'm assuming that speed is in m/s, but I'm not sure, may have to check this on the bus
+            val distance = avgSpeedOverWindow * timeWindow //I'm assuming that speed is in m/s, but I'm not sure, may have to check this on the bus
             val slopeAngle = atan(altitudeDifference/distance)
             //COMPUTE DRAGF
             val Cd = 0.63; val area = 0.5089; val rho = 1.2041
@@ -273,7 +273,9 @@ class MainActivity : ComponentActivity() {
             val Crr = 0.005
             val rollResistanceF = Crr * mass * g * cos(slopeAngle)
             val power = (dragF + gravityF + rollResistanceF) * avgSpeedOverWindow
-            Log.d("","resulting power was $power")
+            Log.d("","resulting power was $power") //sean this needs to go into some kinda global that
+            //contentsScreens.kt can access. however you wanna do it???
+            powerLiveData.postValue("Power: " + "%.1f".format(power) + " W \nSpeed: " + "%.1f".format(avgSpeedOverWindow) + " m/s  \nAngle: " + "%.1f".format(slopeAngle * (180/3.1415)) + " deg" )
         }
 
         override fun onLocationAvailability(availability: LocationAvailability) {

@@ -25,16 +25,20 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import kotlinx.coroutines.delay
 import java.io.File
 import kotlin.time.Duration.Companion.seconds
@@ -48,7 +52,9 @@ data class AvailableDevices(var deviceName: String){
 
 var firstDeviceFlag = true
 var firstConnectedDeviceFlag = true
-var deviceListForHomeScreen = mutableStateListOf<String>("No Connected Devices")
+var deviceListForHomeScreen = mutableStateListOf<String>("No Connected Devices") //sean, july reworking, I think you should use just listOf()
+//becasue apparantly compose can't see changing to mutableStateListOf: https://developer.android.com/develop/ui/compose/state
+//I can't remeber why I went with mutableStateList of TBH
 var deviceListForDeviceScreen = mutableStateListOf<AvailableDevices>(AvailableDevices(emptyPolarIDListString))
 var polarDeviceIdListForConnection = mutableStateListOf<String>(emptyPolarIDListString)
 lateinit var voMaster: BluetoothDevice
@@ -56,7 +62,10 @@ var lapTimeFileExists = false
 var bleStreamsStarted = false
 var firstPhoneTimeStamp = System.currentTimeMillis()
 
+val powerLiveData = MutableLiveData<String>()
+
 @Composable
+//fun HomeScreen(powerTextLiveData:LiveData<String>) { //i'm not sure if I need this, going off https://stackoverflow.com/questions/67031422/update-state-outside-the-composable-function-jetpack-compose
 fun HomeScreen() {
     Log.d("DD", "Home screen composable called")
     var collectingData by remember { mutableStateOf(false) }
@@ -103,7 +112,10 @@ fun HomeScreen() {
                     dataCollectButtonText = "Data Collection Started"
                 }
             }
-            
+            //val powerText: String? by powerTextLiveData.observeAsState() //not sure how to do yet
+            val powerText: String? by powerLiveData.observeAsState()
+            //Text(modifier = Modifier.padding(all = 20.dp), text = "This will show power", color = Color.White)
+            powerText?.let { Text(modifier = Modifier.padding(all = 20.dp), text = it, color = Color.White) }
             LazyColumn(modifier = Modifier.padding(vertical = 4.dp))
             {
                 items(items = deviceListForHomeScreen) { name: String ->
