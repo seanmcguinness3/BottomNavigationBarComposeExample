@@ -272,7 +272,7 @@ class MainActivity : ComponentActivity() {
             //COMPUTE ROLLRESISTANCEF
             val Crr = 0.005
             val rollResistanceF = Crr * mass * g * cos(slopeAngle)
-            val power = dragF + gravityF + rollResistanceF
+            val power = (dragF + gravityF + rollResistanceF) * avgSpeedOverWindow
             Log.d("","resulting power was $power")
         }
 
