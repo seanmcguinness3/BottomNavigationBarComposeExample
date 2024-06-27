@@ -46,9 +46,11 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import java.util.Queue
+import kotlin.math.atan
 
 private const val PERMISSION_REQUEST_CODE = 1
+private const val timeWindow = 50000L
+var altitudeDifference = 0F
 lateinit var api: PolarBleApi
 lateinit var context: Context
 
@@ -139,7 +141,7 @@ class MainActivity : ComponentActivity() {
     }
 
     class SensorActivity() : Activity(), SensorEventListener {
-
+        //sean maybe delete this after barometer window is working
         //private lateinit var sensorManager: SensorManager
         //private var mPressure: Sensor? = null
 /*        public override fun onCreate(savedInstanceState: Bundle?) {
@@ -147,14 +149,35 @@ class MainActivity : ComponentActivity() {
             sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
             mPressure = sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE)
         }*/
+        var baroQueueValues = ArrayDeque<Float>(50)
+        var baroQueueTimeStamps = ArrayDeque<Long>(50)
         override fun onSensorChanged(event: SensorEvent){
             //Log.d("", "barometer reading: ${event.values[0]}")
             var timeStamp = 0L
             if (firstTimeStamps.size >= 1){
                 timeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
             }else{
-                timeStamp = 0L
+                timeStamp = System.currentTimeMillis()
             }
+            baroQueueValues.addFirst(event.values[0])
+            baroQueueTimeStamps.addFirst(timeStamp)
+
+            var idxOfFiftySecondsAgo = 0
+            for (value in baroQueueTimeStamps){
+                val elapsedTime = timeStamp - value
+                //Log.d("","timestamp queue length: ${baroQueueTimeStamps.size} elapsed time: $elapsedTime")
+                if (elapsedTime > timeWindow && idxOfFiftySecondsAgo == 0) { //if the window start index hasn't been set, set it. sean replace 50L with constant,
+                    idxOfFiftySecondsAgo = baroQueueTimeStamps.indexOf(value) //sean you can break this for loop here when you're done
+                    Log.d("","idxOfFiftySecondsAgo: ${idxOfFiftySecondsAgo}")
+                }
+                if (elapsedTime > 2 * timeWindow){ //after a super long time, start removing queue elements so it doesn't get too long
+                    baroQueueTimeStamps.removeLast()
+                    baroQueueValues.removeLast()
+                    break
+                }
+            }
+
+            altitudeDifference = SensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE, baroQueueValues[idxOfFiftySecondsAgo]) - SensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE, baroQueueValues.first())
             generateAndAppend("BarometerData.txt","$timeStamp, ${event.values[0]} \n", "TimeStamp, pressure (hPa)")
         }
 
@@ -211,27 +234,37 @@ class MainActivity : ComponentActivity() {
             speedQueueValues.addFirst(location.lastLocation!!.speed)
             speedQueueTimeStamps.addFirst(timeStamp)
 
-            var debugSpeedArrayString = "" //delete
-
             var idxOfFiftySecondsAgo = 0 //going to have to loop through the timestamp array to find the queue index of speed value that happened 50 seconds ago
+
             for (value in speedQueueTimeStamps){
                 val elapsedTime = timeStamp - value
-                debugSpeedArrayString += "$value, " //delete
-                if (elapsedTime > 50000L) { //sean replace 50L with an app wide constant for window size
+                //Log.d("","timestamp queue length: ${speedQueueTimeStamps.size} elapsed time: $elapsedTime") delete
+                if (elapsedTime > timeWindow && idxOfFiftySecondsAgo == 0) { //if the window start index hasn't been set, set it. sean replace 50L with constant,
                     idxOfFiftySecondsAgo = speedQueueTimeStamps.indexOf(value) //sean you can break this for loop here when you're done
-                    Log.d("","idxOfFiftySecondsAgo: ${idxOfFiftySecondsAgo}")
-                    break
-                    //speedQueueTimeStamps.removeLast()
-                    //speedQueueValues.removeLast()
                 }
+                if (elapsedTime > 2 * timeWindow){ //after a super long time, start removing queue elements so it doesn't get too long
+                    speedQueueTimeStamps.removeLast()
+                    speedQueueValues.removeLast()
+                    break
+                }
+
             }
-            Log.d("","speed timestamp array: $debugSpeedArrayString")
-            val windowTimeOfSpeeds = speedQueueValues.take(idxOfFiftySecondsAgo)
-            val avgSpeedOverWindow = windowTimeOfSpeeds.average()
-            Log.d("","avgSpeedOverWindow: $avgSpeedOverWindow") //delete
+            val windowOfSpeeds = speedQueueValues.take(idxOfFiftySecondsAgo)
+            val avgSpeedOverWindow = windowOfSpeeds.average()
+            //Log.d("","avgSpeedOverWindow: $avgSpeedOverWindow") //delete
+
+            calculatePower(avgSpeedOverWindow, altitudeDifference)
 
             val fileString = "$timeStamp, ${location.lastLocation!!.latitude}, ${location.lastLocation!!.longitude}, ${location.lastLocation!!.altitude} \n"
             generateAndAppend("LocationData.txt",fileString,"TimeStamp, Latitude, Longitude, Altitude \n")
+        }
+
+        private fun calculatePower(avgSpeedOverWindow: Double, altitudeDifference: Float) {
+            val distance = avgSpeedOverWindow / timeWindow //I'm assuming that speed is in m/s, but I'm not sure, may have to check this on the bus
+            val grade = atan(altitudeDifference/distance)
+            //COMPUTE DRAGF
+            val Cd = 0.63; val area = 0.5089; val rho = 1.2041
+            val dragF = 0.5 *
         }
 
         override fun onLocationAvailability(availability: LocationAvailability) {
