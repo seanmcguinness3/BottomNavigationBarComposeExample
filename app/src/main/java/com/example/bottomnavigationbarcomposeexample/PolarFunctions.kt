@@ -101,7 +101,7 @@ fun getDeviceIndexInTimestampArray(deviceIDforFunc: String): Int {
 
 private fun subscribeToPolarHR(deviceId: String) {
     Log.d("", "HR stream for ${getDeviceType(deviceId)} is trying to start ")
-    val header = "Phone timestamp;HR [bpm] \n"
+    val header = "Timestamp, HR_bpm \n"
         hrDisposable = api.startHrStreaming(deviceId)
             .observeOn(Schedulers.io())
             .subscribe(
@@ -123,7 +123,7 @@ private fun subscribeToPolarHR(deviceId: String) {
 }
 
 private fun subscribeToPolarACC(deviceId: String) {
-    val header = "Phone timestamp;sensor timestamp [ns];X [mg];Y [mg];Z [mg] \n"
+    val header = "Timestamp_ns, X_mg, Y_mg, Z_mg \n"
     accDisposable = requestStreamSettings(deviceId, PolarBleApi.PolarDeviceDataType.ACC)
         .flatMap { settings: PolarSensorSetting ->
             api.startAccStreaming(deviceId, settings)
@@ -146,9 +146,9 @@ private fun subscribeToPolarACC(deviceId: String) {
                             numberOfSamples++
                             Log.d("", "Elapsed time for $deviceId: $elapsedTime. averagedTimeStampAdjust = $averagedTimeStampAdjust, # of samples = $numberOfSamples")
                         }
-                        val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
+                        val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp  //removed phone timestamp at ROB's request
                         val adjustedSensorTimeStamp = data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
-                        val fileString = "${adjustedPhoneTimeStamp};${adjustedSensorTimeStamp};${data.x};${data.y};${data.z}; \n"
+                        val fileString = "${adjustedSensorTimeStamp}, ${data.x}, ${data.y}, ${data.z} \n"
                         if (saveToLogFiles) { generateAndAppend("$deviceId-ACCData.txt", fileString, header, getDeviceType(deviceId))
                         }
                         //Log.d(TAG, "ACC    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
@@ -170,7 +170,7 @@ private fun subscribeToPolarACC(deviceId: String) {
 }
 
 private fun subscribeToPolarGYR(deviceId: String) {
-    val header = "Phone timestamp;sensor timestamp [ns];X [dps];Y [dps];Z [dps] \n"
+    val header = "Timestamp_ns, X_dps, Y_dps, Z_dps \n"
     gyrDisposable =
         requestStreamSettings(deviceId, PolarBleApi.PolarDeviceDataType.GYRO)
             .flatMap { settings: PolarSensorSetting ->
@@ -183,7 +183,7 @@ private fun subscribeToPolarGYR(deviceId: String) {
                         for (data in polarGyroData.samples) {
                             val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
                             val adjustedSensorTimeStamp = data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
-                            val fileString = "${adjustedPhoneTimeStamp};${adjustedSensorTimeStamp};${data.x};${data.y};${data.z}; \n"
+                            val fileString = "${adjustedSensorTimeStamp}, ${data.x}, ${data.y}, ${data.z} \n"
                             if (saveToLogFiles) { generateAndAppend("$deviceId-GYRData.txt", fileString, header, getDeviceType(deviceId)) }
                             //Log.d(TAG, "GYR    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
                         }
@@ -197,7 +197,7 @@ private fun subscribeToPolarGYR(deviceId: String) {
 }
 
 private fun subscribeToPolarMAG(deviceId: String) {
-    val header = "Phone timestamp;sensor timestamp [ns];X [G];Y [G];Z [G] \n"
+    val header = "Timestamp_ns, X_G, Y_G, Z_G \n"
     magDisposable =
         requestStreamSettings(deviceId, PolarBleApi.PolarDeviceDataType.MAGNETOMETER)
             .flatMap { settings: PolarSensorSetting ->
@@ -210,7 +210,7 @@ private fun subscribeToPolarMAG(deviceId: String) {
                         for (data in polarMagData.samples) {
                             val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
                             val adjustedSensorTimeStamp = data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
-                            val fileString = "${adjustedPhoneTimeStamp};${adjustedSensorTimeStamp};${data.x};${data.y};${data.z}; \n"
+                            val fileString = "${adjustedSensorTimeStamp}, ${data.x}, ${data.y}, ${data.z} \n"
                             if (saveToLogFiles) { generateAndAppend("$deviceId-MAGData.txt", fileString, header, getDeviceType(deviceId)) }
                             //Log.d(TAG, "MAG    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
                         }
@@ -223,7 +223,7 @@ private fun subscribeToPolarMAG(deviceId: String) {
 }
 
 private fun subscribeToPolarPPG(deviceId: String) {
-    val header = "Phone timestamp;sensor timestamp [ns];channel 0;channel 1;channel 2;ambient \n"
+    val header = "Timestamp_ns, Channel_0, Channel_1, Channel_2, Ambient \n"
     ppgDisposable =
         requestStreamSettings(deviceId, PolarBleApi.PolarDeviceDataType.PPG)
             .flatMap { settings: PolarSensorSetting ->
@@ -250,7 +250,7 @@ private fun subscribeToPolarPPG(deviceId: String) {
 }
 
 private fun subscribeToPolarECG(deviceId: String) {
-    val header = "Phone timestamp;sensor timestamp [ns];voltage \n"
+    val header = "Timestamp_ns, Voltage \n"
     ecgDisposable = requestStreamSettings(deviceId, PolarBleApi.PolarDeviceDataType.ECG)
         .flatMap { settings: PolarSensorSetting ->
             api.startEcgStreaming(deviceId, settings)
@@ -262,7 +262,7 @@ private fun subscribeToPolarECG(deviceId: String) {
                     for (data in polarEcgData.samples) {
                         val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
                         val adjustedSensorTimeStamp = data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
-                        val fileString = "${adjustedPhoneTimeStamp};${adjustedSensorTimeStamp};${data.voltage}; \n"
+                        val fileString = "${adjustedSensorTimeStamp}, ${data.voltage} \n"
                         if (saveToLogFiles) { generateAndAppend("$deviceId-ECGData.txt", fileString, header, getDeviceType(deviceId)) }
                         //Log.d(TAG, "    yV: ${data.voltage} timeStamp: ${data.timeStamp}")
                     }

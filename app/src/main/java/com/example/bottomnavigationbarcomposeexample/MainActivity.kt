@@ -139,13 +139,6 @@ class MainActivity : ComponentActivity() {
 
     class SensorActivity() : Activity(), SensorEventListener {
 
-        //private lateinit var sensorManager: SensorManager
-        //private var mPressure: Sensor? = null
-/*        public override fun onCreate(savedInstanceState: Bundle?) {
-            super.onCreate(savedInstanceState)
-            sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
-            mPressure = sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE)
-        }*/
         override fun onSensorChanged(event: SensorEvent){
             //Log.d("", "barometer reading: ${event.values[0]}")
             var timeStamp = 0L
@@ -154,7 +147,7 @@ class MainActivity : ComponentActivity() {
             }else{
                 timeStamp = 0L
             }
-            generateAndAppend("BarometerData.txt","$timeStamp, ${event.values[0]} \n", "TimeStamp, pressure (hPa)")
+            generateAndAppend("BarometerData.txt","$timeStamp, ${event.values[0]} \n", "Timestamp, pressure_hPa")
         }
 
         override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
@@ -206,7 +199,7 @@ class MainActivity : ComponentActivity() {
                 timeStamp = 0L
             }
             val fileString = "$timeStamp, ${location.lastLocation!!.latitude}, ${location.lastLocation!!.longitude}, ${location.lastLocation!!.altitude} \n"
-            generateAndAppend("LocationData.txt",fileString,"TimeStamp, Latitude, Longitude, Altitude \n")
+            generateAndAppend("LocationData.txt",fileString,"Timestamp, Latitude, Longitude, Altitude \n")
         }
 
         override fun onLocationAvailability(availability: LocationAvailability) {

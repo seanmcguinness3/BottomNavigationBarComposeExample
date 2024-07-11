@@ -137,7 +137,7 @@ private val gattCallback = object :BluetoothGattCallback(){
             val dataTimeDiff = abs(data1527Time - data1528Time)
             if (dataTimeDiff in 1..99) { //if the two data points came in within 100ms of each other, then they can be used for the conversion
                 val convertedVoData = convertRawVoData(rawDataString)
-                generateAndAppend("VO2Data.txt","$adjustedPhoneTimeStamp, $convertedVoData \n", "Phone timestamp, VO2 (mL/min) \n")
+                generateAndAppend("VO2Data.txt",adjustedPhoneTimeStamp.toString() + "%.4f".format(convertedVoData) + "\n", "Timestamp, VO2_mL/min \n")
             }
             data1527Recieved = false
             data1528Recieved = false
