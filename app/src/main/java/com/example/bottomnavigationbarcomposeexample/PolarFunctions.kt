@@ -20,7 +20,7 @@ import java.io.File
 import java.util.EnumMap
 
 private const val TAG = "IDK"
-private var saveToLogFiles = true
+private var saveToLogFiles = false //I want to repurpose this for getting rid of the garbage time stamps, I'm not sure what it was being used for before.
 
 private var dcDisposable: Disposable? = null
 private var ecgDisposable: Disposable? = null
@@ -38,11 +38,6 @@ var firstTimeStamps: MutableList<FirstTimeStamps> = ArrayList()
 
 fun getPolarDeviceIDFromName(name: String): String {
     return name.takeLast(8)  //Consider improving, especially if other polar device ID's are diff
-}
-
-fun saveToLogFiles(saveToFiles: Boolean) {
-    saveToLogFiles = saveToFiles //this actually doesn't work I don't think b/c it's called in a subscribe which may or may not get an updated version of thsi variable
-    //it's kinda a dumb variable anyway so get rid of it if you have time/think of something better
 }
 
 fun subscribeToAllPolarData(deviceIdArray: List<String>) {
@@ -108,7 +103,7 @@ private fun subscribeToPolarHR(deviceId: String) {
                 { hrData: PolarHrData ->
                     for (sample in hrData.samples) {
                         val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
-                        val fileString = "${adjustedPhoneTimeStamp};${sample.hr} \n"
+                        val fileString = "${adjustedPhoneTimeStamp}, ${sample.hr} \n"
                         if (saveToLogFiles) {
                             generateAndAppend("$deviceId-HRData.txt", fileString, header, getDeviceType(deviceId))
                         }
@@ -135,12 +130,8 @@ private fun subscribeToPolarACC(deviceId: String) {
                     val deviceIdx = getDeviceIndexInTimestampArray(deviceId)
                     var averagedTimeStampAdjust = 0.0
                     var numberOfSamples = 0
-                    var calculateTimestampOffset = false //sean refactor i think you can get rid of this variable, should be easy but don't wanna do it now cause not about to test anything
                     for (data in polarAccelerometerData.samples) {
-                        if (firstTimeStamps[deviceIdx].sensorTimeStamp == 0L) {
-                            calculateTimestampOffset = true
-                        }
-                        if (calculateTimestampOffset) {      //if the first timestamp hasn't been set (still zero) then set it
+                        if (firstTimeStamps[deviceIdx].sensorTimeStamp == 0L) {  //if the first timestamp hasn't been set (still zero) then set it
                             val elapsedTime = System.currentTimeMillis() - firstPhoneTimeStamp //use elapsed time to account for time diff in sensor connection
                             averagedTimeStampAdjust += (data.timeStamp - (elapsedTime * 1e6)).toLong() //taking an average of the discrepancy between the phone and sensor time stamps
                             numberOfSamples++
@@ -149,15 +140,19 @@ private fun subscribeToPolarACC(deviceId: String) {
                         val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp  //removed phone timestamp at ROB's request
                         val adjustedSensorTimeStamp = data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
                         val fileString = "${adjustedSensorTimeStamp}, ${data.x}, ${data.y}, ${data.z} \n"
-                        if (saveToLogFiles) { generateAndAppend("$deviceId-ACCData.txt", fileString, header, getDeviceType(deviceId))
+                        if (saveToLogFiles) {
+                            generateAndAppend("$deviceId-ACCData.txt", fileString, header, getDeviceType(deviceId))
                         }
                         //Log.d(TAG, "ACC    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
                     }
                     if (firstTimeStamps[deviceIdx].sensorTimeStamp == 0L) { //only want to set this once
                         firstTimeStamps[deviceIdx].sensorTimeStamp = (averagedTimeStampAdjust/numberOfSamples).toLong() //This made a good over the non averaging system
-                        //sean you should make this be the trigger for when to actually start saving data, to avoid the garbo timestamp data. But, might require some though to not end up with spaghetti
+                        Log.d("","firstTimeStamps.size = ${firstTimeStamps.size}, deviceIdx = $deviceIdx")
+                        if (deviceIdx == firstTimeStamps.size - 1){
+                            saveToLogFiles = true; //only start saving once the timestamp adjust goes down
+                            //i you wanted to do a refactor for data collection button,this could be a good place to hook it to COLLECTBUTREFACTOR
+                        }
                     }
-                    calculateTimestampOffset = false
                     Log.d("","ACC for $deviceId, ${getDeviceType(deviceId)} is running")
                 },
                 { error: Throwable ->
@@ -237,7 +232,7 @@ private fun subscribeToPolarPPG(deviceId: String) {
                             for (data in polarPpgData.samples) {
                                 val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
                                 val adjustedSensorTimeStamp = data.timeStamp - firstTimeStamps[deviceIdx].sensorTimeStamp
-                                val fileString = "${adjustedPhoneTimeStamp};${adjustedSensorTimeStamp};${data.channelSamples[0]};${data.channelSamples[1]};${data.channelSamples[2]};${data.channelSamples[3]} \n"
+                                val fileString = "${adjustedSensorTimeStamp}, ${data.channelSamples[0]}, ${data.channelSamples[1]}, ${data.channelSamples[2]}, ${data.channelSamples[3]} \n"
                                 if (saveToLogFiles) { generateAndAppend("$deviceId-PPGData.txt", fileString, header, getDeviceType(deviceId)) }
                             }
                         }

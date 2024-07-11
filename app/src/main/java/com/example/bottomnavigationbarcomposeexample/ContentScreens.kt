@@ -55,12 +55,20 @@ lateinit var voMaster: BluetoothDevice
 var lapTimeFileExists = false
 var bleStreamsStarted = false
 var firstPhoneTimeStamp = System.currentTimeMillis()
+var currentActivity = "Stand" //for the activity selection spinner
+var currentActivityStopStart = "Start"
 
 @Composable
 fun HomeScreen() {
     Log.d("DD", "Home screen composable called")
-    var collectingData by remember { mutableStateOf(false) }
-    var dataCollectButtonText by remember { mutableStateOf("Start Data Collection")}
+    var dataCollectButtonTextPrevious = "" //without this the text gets reverted.
+    //I think you could prolly store all the screens data in some kinda structure, keep an eye out for something good but this works for now
+    if (bleStreamsStarted) {
+        dataCollectButtonTextPrevious = "Data Collection Started"
+    } else {
+        dataCollectButtonTextPrevious = "Start Data Collection"
+    }
+    var dataCollectButtonText by remember { mutableStateOf(dataCollectButtonTextPrevious)}
     Column(
         Modifier.fillMaxHeight(),
         verticalArrangement = Arrangement.SpaceBetween
@@ -79,16 +87,15 @@ fun HomeScreen() {
                     contentColor = colorResource(id = R.color.colorPrimaryDark)
                 ),
                 onClick = {
-                    collectingData = !collectingData
                     dataCollectButtonText = "Starting..."
-                    saveToLogFiles(collectingData) //only save to log files when collecting data
+                    //saveToLogFiles(collectingData) //only save to log files when collecting data
+                    //^^when start data collection is pressed, that's when the app actually starts subscribing to the sensors. So this is unnecessary
                     firstPhoneTimeStamp = System.currentTimeMillis()//this will be the only place phone time stamp gets set
 
                     if (!bleStreamsStarted) {
                         if (::voMaster.isInitialized) {
                             subscribeToVOMaster(voMaster, context = context)
                         }
-                        saveToLogFiles(true)
                         bleStreamsStarted = true
                         subscribeToAllPolarData(polarDeviceIdListForConnection.toList())
                     }
@@ -98,7 +105,7 @@ fun HomeScreen() {
             LaunchedEffect(key1 = dataCollectButtonText){
                 if (dataCollectButtonText == "Starting..."){
                     Log.d("","data collect launched effect called")
-                    //SEAN refactor this is another re-work, not super important though
+                    //SEAN refactor this is another re-work, not super important though, search COLLECTBUTREFACTOR for where to hook
                     delay(15000)  //See if there's a way to get the above function to return an on finished
                     dataCollectButtonText = "Data Collection Started"
                 }
@@ -114,8 +121,8 @@ fun HomeScreen() {
         //LAP BUTTON
         val list = listOf("Stand", "Sit", "Walk", "Upstairs", "Downstairs")
         val expanded = remember { mutableStateOf(false) }
-        val currentValue = remember { mutableStateOf(list[0]) }
-        val startText = remember { mutableStateOf("Start") }
+        val currentValue = remember { mutableStateOf(currentActivity) }
+        val startText = remember { mutableStateOf(currentActivityStopStart) }
         Row {
             Button(modifier = Modifier
                 .padding(horizontal = 20.dp, vertical = 20.dp),
@@ -124,14 +131,16 @@ fun HomeScreen() {
                     contentColor = colorResource(id = R.color.colorPrimaryDark)
                 ),
                 onClick = {
-                    if (!lapTimeFileExists) {
+                    val timeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
+                    startText.value = if (startText.value == "Start"){ "End" } else { "Start" }
+                    generateAndAppend("LapTimes.txt","${startText.value} of ${currentValue.value}: $timeStamp \n")
+                    currentActivityStopStart = startText.value //saves screen data for when you leave and come back. keep eyes peeled for a better way!!
+/*                    if (!lapTimeFileExists) { //could be using generateAndAppend, delete if working!!
                         generateNewFile("LapTimes.txt")
                         lapTimeFileExists = true
                     }
                     val file = File("${getSaveFolder().absolutePath}/LapTimes.txt")
-                    val timeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
-                    file.appendText("${startText.value} of ${currentValue.value}: $timeStamp \n")
-                    startText.value = if (startText.value == "Start"){ "End" } else { "Start" }
+                    file.appendText("${startText.value} of ${currentValue.value}: $timeStamp \n")*/
                 }) {
                 Text("${startText.value} ${currentValue.value}")
             }
@@ -152,11 +161,10 @@ fun HomeScreen() {
                     list.forEach {
                         DropdownMenuItem(onClick = {
                             currentValue.value = it
+                            currentActivity = it
                             expanded.value = false
                         }) {
-
                             Text(text = it)
-
                         }
                     }
                 }
