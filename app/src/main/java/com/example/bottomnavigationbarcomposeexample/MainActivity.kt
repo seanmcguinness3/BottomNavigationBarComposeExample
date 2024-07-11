@@ -147,7 +147,7 @@ class MainActivity : ComponentActivity() {
             }else{
                 timeStamp = 0L
             }
-            generateAndAppend("BarometerData.txt","$timeStamp, ${event.values[0]} \n", "Timestamp, pressure_hPa")
+            generateAndAppend("BarometerData.txt","$timeStamp, ${event.values[0]} \n", "Timestamp, pressure_hPa \n")
         }
 
         override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
