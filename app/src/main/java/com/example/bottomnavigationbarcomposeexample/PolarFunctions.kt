@@ -35,7 +35,7 @@ data class FirstTimeStamps(val sensorID: String) {
 }
 
 var firstTimeStamps: MutableList<FirstTimeStamps> = ArrayList()
-
+var numSensorsConnected = 0
 fun getPolarDeviceIDFromName(name: String): String {
     return name.takeLast(8)  //Consider improving, especially if other polar device ID's are diff
 }
@@ -148,7 +148,10 @@ private fun subscribeToPolarACC(deviceId: String) {
                     if (firstTimeStamps[deviceIdx].sensorTimeStamp == 0L) { //only want to set this once
                         firstTimeStamps[deviceIdx].sensorTimeStamp = (averagedTimeStampAdjust/numberOfSamples).toLong() //This made a good over the non averaging system
                         Log.d("","firstTimeStamps.size = ${firstTimeStamps.size}, deviceIdx = $deviceIdx")
-                        if (deviceIdx == firstTimeStamps.size - 1){
+                        //since this runs async there's a chance that this condition is met prior to all sensors being connected
+                        //switching to iterator based method
+                        numSensorsConnected++
+                        if (numSensorsConnected == firstTimeStamps.size){
                             saveToLogFiles = true; //only start saving once the timestamp adjust goes down
                             //i you wanted to do a refactor for data collection button,this could be a good place to hook it to COLLECTBUTREFACTOR
                         }

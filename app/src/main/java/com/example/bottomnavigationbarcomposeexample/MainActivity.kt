@@ -198,7 +198,8 @@ class MainActivity : ComponentActivity() {
             }else{
                 timeStamp = 0L
             }
-            val fileString = "$timeStamp, ${location.lastLocation!!.latitude}, ${location.lastLocation!!.longitude}, ${location.lastLocation!!.altitude} \n"
+            val fileString = timeStamp.toString() + ", " + "%.4f".format(location.lastLocation!!.latitude) + ", " + "%.4f".format(location.lastLocation!!.longitude) + ", " + "%.4f".format(location.lastLocation!!.altitude) + "\n"
+            Log.d("","location data: $fileString")
             generateAndAppend("LocationData.txt",fileString,"Timestamp, Latitude, Longitude, Altitude \n")
         }
 
