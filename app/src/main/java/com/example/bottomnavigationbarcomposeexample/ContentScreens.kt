@@ -132,15 +132,9 @@ fun HomeScreen() {
                 ),
                 onClick = {
                     val timeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
-                    startText.value = if (startText.value == "Start"){ "End" } else { "Start" }
                     generateAndAppend("LapTimes.txt","${startText.value} of ${currentValue.value}: $timeStamp \n")
+                    startText.value = if (startText.value == "Start"){ "End" } else { "Start" }
                     currentActivityStopStart = startText.value //saves screen data for when you leave and come back. keep eyes peeled for a better way!!
-/*                    if (!lapTimeFileExists) { //could be using generateAndAppend, delete if working!!
-                        generateNewFile("LapTimes.txt")
-                        lapTimeFileExists = true
-                    }
-                    val file = File("${getSaveFolder().absolutePath}/LapTimes.txt")
-                    file.appendText("${startText.value} of ${currentValue.value}: $timeStamp \n")*/
                 }) {
                 Text("${startText.value} ${currentValue.value}")
             }
