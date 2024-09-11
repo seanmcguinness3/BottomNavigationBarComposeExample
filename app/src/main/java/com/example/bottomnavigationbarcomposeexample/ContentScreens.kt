@@ -88,8 +88,6 @@ fun HomeScreen() {
                 ),
                 onClick = {
                     dataCollectButtonText = "Starting..."
-                    //saveToLogFiles(collectingData) //only save to log files when collecting data
-                    //^^when start data collection is pressed, that's when the app actually starts subscribing to the sensors. So this is unnecessary
                     firstPhoneTimeStamp = System.currentTimeMillis()//this will be the only place phone time stamp gets set
 
                     if (!bleStreamsStarted) {

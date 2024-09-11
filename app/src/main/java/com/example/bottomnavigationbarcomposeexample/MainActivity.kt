@@ -198,9 +198,9 @@ class MainActivity : ComponentActivity() {
             }else{
                 timeStamp = 0L
             }
-            val fileString = timeStamp.toString() + ", " + location.lastLocation!!.latitude + ", " + location.lastLocation!!.longitude + ", " + "%.7f".format(location.lastLocation!!.altitude) + "\n"
+            val fileString = timeStamp.toString() + ", " + location.lastLocation!!.latitude + ", " + location.lastLocation!!.longitude + ", " + "%.7f".format(location.lastLocation!!.altitude) + ", " + location.lastLocation!!.speed + "\n"
             Log.d("","location data: $fileString")
-            generateAndAppend("LocationData.txt",fileString,"Timestamp, Latitude, Longitude, Altitude \n")
+            generateAndAppend("LocationData.txt",fileString,"Timestamp, Latitude, Longitude, Altitude, Speed \n")
         }
 
         override fun onLocationAvailability(availability: LocationAvailability) {

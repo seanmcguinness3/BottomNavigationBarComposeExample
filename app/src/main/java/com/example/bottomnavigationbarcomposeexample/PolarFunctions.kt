@@ -1,5 +1,6 @@
 package com.example.bottomnavigationbarcomposeexample
 
+import android.icu.text.DateFormat
 import android.util.Log
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.disposables.Disposable
@@ -17,7 +18,9 @@ import io.reactivex.rxjava3.core.SingleEmitter
 import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.delay
 import java.io.File
+import java.util.Date
 import java.util.EnumMap
+import java.util.TimeZone
 
 private const val TAG = "IDK"
 private var saveToLogFiles = false //I want to repurpose this for getting rid of the garbage time stamps, I'm not sure what it was being used for before.
@@ -148,8 +151,12 @@ private fun subscribeToPolarACC(deviceId: String) {
                     if (firstTimeStamps[deviceIdx].sensorTimeStamp == 0L) { //only want to set this once
                         firstTimeStamps[deviceIdx].sensorTimeStamp = (averagedTimeStampAdjust/numberOfSamples).toLong() //This made a good over the non averaging system
                         Log.d("","firstTimeStamps.size = ${firstTimeStamps.size}, deviceIdx = $deviceIdx")
-                        //since this runs async there's a chance that this condition is met prior to all sensors being connected
-                        //switching to iterator based method
+                        if (numSensorsConnected == 0){
+                            val df: DateFormat = DateFormat.getTimeInstance()
+                            df.timeZone = android.icu.util.TimeZone.getTimeZone("utc")
+                            val utcTime: String = df.format(Date())
+                            generateAndAppend("LapTimes.txt","data collection started at $utcTime")
+                        }
                         numSensorsConnected++
                         if (numSensorsConnected == firstTimeStamps.size){
                             saveToLogFiles = true; //only start saving once the timestamp adjust goes down
