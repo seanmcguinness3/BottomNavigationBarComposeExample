@@ -11,6 +11,7 @@ import com.polar.sdk.api.model.PolarGyroData
 import com.polar.sdk.api.model.PolarHrData
 import com.polar.sdk.api.model.PolarMagnetometerData
 import com.polar.sdk.api.model.PolarPpgData
+import com.polar.sdk.api.model.PolarPpiData
 import com.polar.sdk.api.model.PolarSensorSetting
 import io.reactivex.rxjava3.core.Flowable
 import io.reactivex.rxjava3.core.Single
@@ -31,6 +32,7 @@ private var accDisposable: Disposable? = null
 private var gyrDisposable: Disposable? = null
 private var magDisposable: Disposable? = null
 private var ppgDisposable: Disposable? = null
+private var ppiDisposable: Disposable? = null
 private var hrDisposable: Disposable? = null
 
 data class FirstTimeStamps(val sensorID: String) {
@@ -68,6 +70,7 @@ fun subscribeToAllPolarData(deviceIdArray: List<String>) {
                 subscribeToPolarACC(deviceId)
                 subscribeToPolarGYR(deviceId)
                 subscribeToPolarMAG(deviceId)
+                subscribeToPolarPPI(deviceId)
                 subscribeToPolarPPG(deviceId)
             }
         }
@@ -252,6 +255,28 @@ private fun subscribeToPolarPPG(deviceId: String) {
                     },
                     { Log.d(TAG, "PPG stream complete") }
                 )
+}
+
+private fun subscribeToPolarPPI(deviceId: String){
+    val header = "Timestamp_ms, HR_bpm, PPI_ms, blocker, error, skinContactStatus, skinContactSupported \n"
+    ppiDisposable = api.startPpiStreaming(deviceId)
+        .observeOn(Schedulers.io())
+        .subscribe(
+            { ppiData: PolarPpiData ->
+                for (sample in ppiData.samples) {
+                    val adjustedPhoneTimeStamp = System.currentTimeMillis() - firstPhoneTimeStamp
+                    val fileString = "$adjustedPhoneTimeStamp, ${sample.hr}, ${sample.ppi}, ${sample.blockerBit}, ${sample.errorEstimate}, ${sample.skinContactStatus}, ${sample.skinContactSupported} \n"
+                    if(saveToLogFiles){
+                        generateAndAppend("$deviceId-PPIData.txt", fileString, header, getDeviceType(deviceId))
+                    }
+                    //Log.d(TAG, "PPI    ppi: ${sample.ppi} blocker: ${sample.blockerBit} errorEstimate: ${sample.errorEstimate}")
+                }
+            },
+            { error: Throwable ->
+                Log.e(TAG, "PPI stream failed. Reason $error")
+            },
+            { Log.d(TAG, "PPI stream complete") }
+        )
 }
 
 private fun subscribeToPolarECG(deviceId: String) {
