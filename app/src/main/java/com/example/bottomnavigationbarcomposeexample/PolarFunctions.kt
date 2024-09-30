@@ -1,6 +1,7 @@
 package com.example.bottomnavigationbarcomposeexample
 
 import android.icu.text.DateFormat
+import android.icu.text.SimpleDateFormat
 import android.util.Log
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.disposables.Disposable
@@ -19,6 +20,7 @@ import io.reactivex.rxjava3.core.SingleEmitter
 import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.delay
 import java.io.File
+import java.util.Calendar
 import java.util.Date
 import java.util.EnumMap
 import java.util.TimeZone
@@ -158,7 +160,10 @@ private fun subscribeToPolarACC(deviceId: String) {
                             val df: DateFormat = DateFormat.getTimeInstance()
                             df.timeZone = android.icu.util.TimeZone.getTimeZone("utc")
                             val utcTime: String = df.format(Date())
-                            generateAndAppend("LapTimes.txt","data collection started at $utcTime")
+                            val date: DateFormat = DateFormat.getDateInstance()
+                            date.timeZone = android.icu.util.TimeZone.getTimeZone("utc")
+                            val utcDate: String = date.format(Date())
+                            generateAndAppend("LapTimes.txt","data collection started at $utcTime, $utcDate \n")
                         }
                         numSensorsConnected++
                         if (numSensorsConnected == firstTimeStamps.size){
